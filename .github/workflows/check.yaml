@@ -1,0 +1,75 @@
+name: check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  format:
+    name: formatting
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allows other jobs to continue if this fails
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: install taplo
+        run: cargo install taplo-cli
+
+      - name: run Rust fmt
+        run: cargo fmt --all -- --check
+
+      - name: run TOML fmt
+        run: taplo fmt --check
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allows other jobs to continue if this fails
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: run clippy
+        run: cargo clippy -- -D warnings
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allows other jobs to continue if this fails
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose
