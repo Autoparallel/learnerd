@@ -1,5 +1,5 @@
 [package]
-name        = "learnerd"
+name        = "learner"
 version     = "0.1.0"
 edition     = "2021"
 description = "A simple library for learning stuff"
