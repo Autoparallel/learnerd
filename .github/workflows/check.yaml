@@ -73,24 +73,3 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
-
-  required-checks:
-    name: all checks
-    needs: [format, lint, test]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Check all jobs status
-        run: |
-          if [[ "${{ needs.format.result }}" != "success" ]]; then
-            echo "Format check failed"
-            exit 1
-          fi
-          if [[ "${{ needs.lint.result }}" != "success" ]]; then
-            echo "Lint failed"
-            exit 1
-          fi
-          if [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "Tests failed"
-            exit 1
-          fi
