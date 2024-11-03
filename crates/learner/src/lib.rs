@@ -27,7 +27,6 @@ pub mod clients;
 pub mod database;
 pub mod errors;
 pub mod paper;
-#[cfg(test)] mod tests;
 
 use clients::{arxiv::ArxivClient, doi::DOIClient, iacr::IACRClient};
 use database::Database;

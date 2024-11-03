@@ -164,7 +164,6 @@ fn extract_arxiv_id(url: &Url) -> Result<String, LearnerError> {
     .ok_or(LearnerError::InvalidIdentifier)
 }
 
-#[allow(unused)]
 fn extract_iacr_id(url: &Url) -> Result<String, LearnerError> {
   let path = url.path();
   let re = regex::Regex::new(r"(\d{4}/\d+)$").unwrap();
@@ -174,7 +173,65 @@ fn extract_iacr_id(url: &Url) -> Result<String, LearnerError> {
     .ok_or(LearnerError::InvalidIdentifier)
 }
 
-#[allow(unused)]
 fn extract_doi(url: &Url) -> Result<String, LearnerError> {
   url.path().strip_prefix('/').map(|s| s.to_string()).ok_or(LearnerError::InvalidIdentifier)
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_arxiv_paper_from_id() {
+    let paper = Paper::new("2301.07041").await.unwrap();
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::Arxiv);
+    dbg!(paper);
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_arxiv_paper_from_url() {
+    let paper = Paper::new("https://arxiv.org/abs/2301.07041").await.unwrap();
+    assert_eq!(paper.source, Source::Arxiv);
+    assert_eq!(paper.source_identifier, "2301.07041");
+  }
+
+  #[tokio::test]
+  async fn test_iacr_paper_from_id() -> anyhow::Result<()> {
+    let paper = Paper::new("2016/260").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::IACR);
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_iacr_paper_from_url() -> anyhow::Result<()> {
+    let paper = Paper::new("https://eprint.iacr.org/2016/260").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::IACR);
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_doi_paper_from_id() -> anyhow::Result<()> {
+    let paper = Paper::new("10.1145/1327452.1327492").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::DOI);
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_doi_paper_from_url() -> anyhow::Result<()> {
+    let paper = Paper::new("https://doi.org/10.1145/1327452.1327492").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::DOI);
+    Ok(())
+  }
 }
