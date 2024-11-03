@@ -131,3 +131,40 @@ pub enum LearnerError {
   #[error(transparent)]
   ColumnOverflow(#[from] std::num::TryFromIntError),
 }
+
+impl LearnerError {
+  /// Checks if this error represents a duplicate entry in the database.
+  ///
+  /// This helper method checks for SQLite's unique constraint violation, which
+  /// occurs when trying to insert a paper that already exists in the database
+  /// (matching source and source_identifier).
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use learner::{Database, LearnerError, Paper};
+  ///
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// let db = Database::open("papers.db").await?;
+  /// let paper = Paper::new("2301.07041").await?;
+  ///
+  /// match paper.save(&db).await {
+  ///   Ok(id) => println!("Saved paper with ID: {}", id),
+  ///   Err(e) if e.is_duplicate_error() => println!("Paper already exists!"),
+  ///   Err(e) => return Err(e.into()),
+  /// }
+  /// # Ok(())
+  /// # }
+  /// ```
+  ///
+  /// This is particularly useful for providing friendly error messages when
+  /// attempting to add papers that are already in the database.
+  pub fn is_duplicate_error(&self) -> bool {
+    matches!(
+        self,
+        LearnerError::AsyncSqlite(tokio_rusqlite::Error::Rusqlite(
+            rusqlite::Error::SqliteFailure(error, _)
+        )) if error.code == rusqlite::ErrorCode::ConstraintViolation
+    )
+  }
+}

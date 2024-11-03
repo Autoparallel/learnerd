@@ -197,8 +197,35 @@ async fn main() -> Result<(), LearnerdErrors> {
         style(paper.authors.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", ")).white()
       );
 
-      let id = paper.save(&db).await?;
-      println!("\n{} Saved paper with ID: {}", style(SAVE).green(), style(id).yellow());
+      match paper.save(&db).await {
+        Ok(id) => {
+          println!("\n{} Saved paper with ID: {}", style(SAVE).green(), style(id).yellow());
+        },
+        Err(e) if e.is_duplicate_error() => {
+          println!("\n{} This paper is already in your database", style("ℹ").blue());
+
+          // Optionally show existing paper's details
+          if let Some(existing) =
+            db.get_paper_by_source_id(&paper.source, &paper.source_identifier).await?
+          {
+            println!(
+              "   {} {}",
+              style("Source:").blue(),
+              style(format!("{} {}", existing.source, existing.source_identifier)).white()
+            );
+            println!("   {} {}", style("Title:").blue(), style(&existing.title).white());
+            println!(
+              "   {} {}",
+              style("Authors:").blue(),
+              style(
+                existing.authors.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", ")
+              )
+              .white()
+            );
+          }
+        },
+        Err(e) => return Err(LearnerdErrors::Learner(e)),
+      }
       Ok(())
     },
 
