@@ -308,7 +308,15 @@ async fn main() -> Result<(), LearnerdErrors> {
     },
 
     Commands::Remove { source, identifier } => {
-      let path = Database::default_path();
+      let path = cli.path.unwrap_or_else(|| {
+        let default_path = Database::default_path();
+        println!(
+          "{} Using default database path: {}",
+          style(BOOKS).cyan(),
+          style(default_path.display()).yellow()
+        );
+        default_path
+      });
       trace!("Using database at: {}", path.display());
       let _db = Database::open(&path).await?;
 
@@ -322,7 +330,15 @@ async fn main() -> Result<(), LearnerdErrors> {
     },
 
     Commands::Get { source, identifier } => {
-      let path = Database::default_path();
+      let path = cli.path.unwrap_or_else(|| {
+        let default_path = Database::default_path();
+        println!(
+          "{} Using default database path: {}",
+          style(BOOKS).cyan(),
+          style(default_path.display()).yellow()
+        );
+        default_path
+      });
       trace!("Using database at: {}", path.display());
       let db = Database::open(&path).await?;
 
@@ -369,7 +385,15 @@ async fn main() -> Result<(), LearnerdErrors> {
     },
 
     Commands::Search { query } => {
-      let path = Database::default_path();
+      let path = cli.path.unwrap_or_else(|| {
+        let default_path = Database::default_path();
+        println!(
+          "{} Using default database path: {}",
+          style(BOOKS).cyan(),
+          style(default_path.display()).yellow()
+        );
+        default_path
+      });
       trace!("Using database at: {}", path.display());
       let db = Database::open(&path).await?;
 
@@ -436,7 +460,15 @@ async fn main() -> Result<(), LearnerdErrors> {
     },
 
     Commands::Clean { force } => {
-      let path = cli.path.unwrap_or_else(Database::default_path);
+      let path = cli.path.unwrap_or_else(|| {
+        let default_path = Database::default_path();
+        println!(
+          "{} Using default database path: {}",
+          style(BOOKS).cyan(),
+          style(default_path.display()).yellow()
+        );
+        default_path
+      });
       if path.exists() {
         println!(
           "{} Database found at: {}",
