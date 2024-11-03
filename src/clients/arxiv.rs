@@ -94,8 +94,7 @@ mod tests {
     let client = ArxivClient::new();
     let paper = client.fetch_paper("2301.07041").await.unwrap();
 
-    println!("Title: {}", paper.title);
-    println!("Authors: {:?}", paper.authors);
+    dbg!(&paper);
 
     assert!(!paper.title.is_empty());
     assert!(!paper.authors.is_empty());
