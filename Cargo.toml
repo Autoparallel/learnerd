@@ -3,7 +3,12 @@ name        = "learner"
 version     = "0.1.0"
 edition     = "2021"
 description = "A simple library for learning stuff"
-license     = "MIT"
+authors     = ["Colin Roberts"]
+repository  = "https://github.com/autoparallel/learner"
+license     = "Apache-2.0"
+# documentation = "https://docs.rs/learner"
+readme   = "README.md"
+keywords = ["learning", "research", "automation", "papers"]
 
 [dependencies]
 tokio       = { version = "1.0", features = ["full"] }
