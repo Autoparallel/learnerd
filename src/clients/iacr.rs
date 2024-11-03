@@ -1,4 +1,4 @@
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use quick_xml::de::from_str;
 use serde::Deserialize;
 

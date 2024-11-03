@@ -1,9 +1,7 @@
-//! Client for interacting with DOIs via the Crossref API
-
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use serde::Deserialize;
 
-use crate::{Author, Paper, PaperError, Source};
+use super::*;
 
 #[derive(Debug, Deserialize)]
 struct CrossrefResponse {
@@ -22,6 +20,8 @@ struct CrossrefWork {
   url:              Option<String>,
   #[serde(rename = "DOI")]
   doi:              String,
+  // Add created field as fallback
+  created:          Option<CrossrefDate>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,13 +58,38 @@ impl DOIClient {
     }
   }
 
+  fn parse_date(&self, date: &CrossrefDate) -> Option<DateTime<Utc>> {
+    let parts = date.date_parts.first()?;
+    debug!("Date parts: {:?}", parts);
+
+    let year = *parts.first()?;
+    let month = parts.get(1).copied().unwrap_or(1);
+    let day = parts.get(2).copied().unwrap_or(1);
+
+    debug!("Parsed year: {}, month: {}, day: {}", year, month, day);
+
+    Utc.with_ymd_and_hms(year, month as u32, day as u32, 0, 0, 0).single()
+  }
+
   pub async fn fetch_paper(&self, doi: &str) -> Result<Paper, PaperError> {
     let url = format!("{}/{}", self.base_url, doi);
+    debug!("Fetching from Crossref via: {}", url);
 
-    let response: CrossrefResponse =
-      self.client.get(&url).send().await?.error_for_status()?.json().await?;
+    let response = self.client.get(&url).send().await?;
+    let status = response.status();
+    debug!("Crossref response status: {}", status);
+
+    let text = response.text().await?;
+    debug!("Crossref response: {}", text);
+
+    let response: CrossrefResponse = serde_json::from_str(&text)
+      .map_err(|e| PaperError::ApiError(format!("Failed to parse JSON: {}", e)))?;
 
     let work = response.message;
+
+    debug!("Published print: {:?}", work.published_print);
+    debug!("Published online: {:?}", work.published_online);
+    debug!("Created: {:?}", work.created);
 
     // Get the first title or return an error
     let title =
@@ -88,19 +113,19 @@ impl DOIClient {
       })
       .collect();
 
-    // Try to get publication date, preferring print date over online date
+    // Try to get publication date, with multiple fallbacks
     let publication_date = work
       .published_print
-      .or(work.published_online)
-      .and_then(|date| {
-        let parts = date.date_parts.first()?.clone();
-        let year = parts.get(0).copied()?;
-        let month = parts.get(1).copied().unwrap_or(1);
-        let day = parts.get(2).copied().unwrap_or(1);
-
-        Utc.with_ymd_and_hms(year, month as u32, day as u32, 0, 0, 0).single()
-      })
-      .ok_or_else(|| PaperError::ApiError("No valid publication date found".into()))?;
+      .as_ref()
+      .and_then(|d| self.parse_date(d))
+      .or_else(|| work.published_online.as_ref().and_then(|d| self.parse_date(d)))
+      .or_else(|| work.created.as_ref().and_then(|d| self.parse_date(d)))
+      .ok_or_else(|| {
+        PaperError::ApiError(format!(
+          "No valid publication date found. Print: {:?}, Online: {:?}, Created: {:?}",
+          work.published_print, work.published_online, work.created
+        ))
+      })?;
 
     Ok(Paper {
       title,
@@ -109,21 +134,30 @@ impl DOIClient {
       publication_date,
       source: Source::DOI,
       source_identifier: doi.to_string(),
-      pdf_url: work.url, // Note: This might not always be a PDF URL
+      pdf_url: work.url,
       doi: Some(work.doi),
     })
   }
 }
 
+impl Default for DOIClient {
+  fn default() -> Self { Self::new() }
+}
+
 #[cfg(test)]
 mod tests {
+  use tracing_test::traced_test;
+
   use super::*;
 
+  #[traced_test]
   #[tokio::test]
   async fn test_crossref_parse() -> anyhow::Result<()> {
-    let doi = "10.1145/1327452.1327492"; // Example paper
+    let doi = "10.1145/1327452.1327492";
     let client = DOIClient::new();
-    let paper = client.fetch_paper(doi).await?;
+    let paper = client.fetch_paper(doi).await.unwrap();
+
+    dbg!(&paper);
 
     assert!(!paper.title.is_empty());
     assert!(!paper.authors.is_empty());

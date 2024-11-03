@@ -30,7 +30,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-learner = "0.1.0"
+learner = "0.1"
 ```
 
 ## Quick Start
