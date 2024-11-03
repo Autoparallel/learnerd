@@ -23,7 +23,7 @@ jobs:
           components: rustfmt
 
       - name: install taplo
-        run: tamasfe/taplo-action@v1
+        run: cargo install taplo-cli
 
       - name: run Rust fmt
         run: cargo fmt --all -- --check
