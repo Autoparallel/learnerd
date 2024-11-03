@@ -250,7 +250,15 @@ async fn main() -> Result<(), LearnerdErrors> {
     },
 
     Commands::Add { identifier } => {
-      let path = Database::default_path();
+      let path = cli.path.unwrap_or_else(|| {
+        let default_path = Database::default_path();
+        println!(
+          "{} Using default database path: {}",
+          style(BOOKS).cyan(),
+          style(default_path.display()).yellow()
+        );
+        default_path
+      });
       trace!("Using database at: {}", path.display());
       let db = Database::open(&path).await?;
 
