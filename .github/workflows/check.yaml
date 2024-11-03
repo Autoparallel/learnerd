@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: install Rust
-        uses: dtolnay/rust-toolchain@nightly  # Changed to nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
 
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly  # Changed to nightly
+        uses: dtolnay/rust-toolchain@nightly
         with:
           components: clippy
 
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly  # Changed to nightly
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Cache dependencies
         uses: actions/cache@v3
@@ -73,3 +73,31 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
+
+  udeps:
+    name: unused dependencies
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-udeps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-udeps-
+
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps --locked
+
+      - name: Check unused dependencies
+        run: cargo udeps
