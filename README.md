@@ -6,7 +6,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/learner)](https://crates.io/crates/learner)
 [![docs.rs](https://img.shields.io/docsrs/learner)](https://docs.rs/learner)
-[![CI](https://github.com/autoparallel/learner/actions/workflows/check.yml/badge.svg)](https://github.com/autoparallel/learner/actions/workflows/check.yml)
+[![CI](https://github.com/autoparallel/learner/actions/workflows/check.yaml/badge.svg)](https://github.com/autoparallel/learner/actions/workflows/check.yaml)
 [![License](https://img.shields.io/crates/l/learner)](LICENSE)
 
 <img src="assets/header.svg" alt="learner header" width="600px">
@@ -21,8 +21,6 @@
   - IACR ePrints
   - DOI-based papers
 - Handle both URLs and direct identifiers
-- Async-first design
-- Strong typing and error handling
 
 ## 📦 Installation 
 
