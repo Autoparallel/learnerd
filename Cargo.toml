@@ -1,5 +1,6 @@
 [workspace]
-members = ["crates/learner", "crates/learnerd"]
+members  = ["crates/learner", "crates/learnerd"]
+resolver = "2"
 
 [workspace.package]
 authors    = ["Colin Roberts"]
