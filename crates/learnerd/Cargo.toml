@@ -13,13 +13,13 @@ version              = "0.1.0"
 learner.workspace = true
 
 clap.workspace               = true
-tokio.workspace              = true
-tracing.workspace            = true
-tracing-subscriber.workspace = true
 console.workspace            = true
 dialoguer.workspace          = true
 glob.workspace               = true
 thiserror.workspace          = true
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
 
 
 [dev-dependencies]

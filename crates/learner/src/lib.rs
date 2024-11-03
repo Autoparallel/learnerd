@@ -16,6 +16,7 @@
 //! ```
 
 #![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use std::{path::PathBuf, str::FromStr};
 
 use chrono::{DateTime, TimeZone, Utc};

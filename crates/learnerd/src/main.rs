@@ -1,3 +1,37 @@
+//! Command line interface and daemon for the learner paper management system.
+//!
+//! This crate provides a CLI tool for managing academic papers using the `learner` library.
+//! It supports operations like:
+//! - Database initialization and management
+//! - Paper addition and retrieval
+//! - Full-text search across papers
+//! - Database maintenance and cleanup
+//!
+//! # Usage
+//!
+//! ```bash
+//! # Initialize a new database
+//! learnerd init
+//!
+//! # Add a paper by its identifier
+//! learnerd add 2301.07041
+//!
+//! # Retrieve a paper
+//! learnerd get arxiv 2301.07041
+//!
+//! # Search for papers
+//! learnerd search "neural networks"
+//!
+//! # Clean up the database
+//! learnerd clean
+//! ```
+//!
+//! The CLI provides colored output and interactive confirmations for destructive
+//! operations. It also supports various verbosity levels for debugging through
+//! the `-v` flag.
+
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 use std::path::PathBuf;
 
 use clap::{builder::ArgAction, Parser, Subcommand};
@@ -12,18 +46,27 @@ use tracing_subscriber::EnvFilter;
 
 pub mod errors;
 
+// Emoji constants for prettier output
+/// Search operation indicator
 static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🔍 ", "");
+/// Database/library operations indicator
 static BOOKS: Emoji<'_, '_> = Emoji("📚 ", "");
+/// Initialization/startup indicator
 static ROCKET: Emoji<'_, '_> = Emoji("🚀 ", "");
+/// Paper details indicator
 static PAPER: Emoji<'_, '_> = Emoji("📄 ", "");
+/// Save operation indicator
 static SAVE: Emoji<'_, '_> = Emoji("💾 ", "");
+/// Warning indicator
 static WARNING: Emoji<'_, '_> = Emoji("⚠️  ", "");
+/// Success indicator
 static SUCCESS: Emoji<'_, '_> = Emoji("✨ ", "");
 
+/// Command line interface configuration and argument parsing
 #[derive(Parser)]
 #[command(author, version, about = "Daemon and CLI for the learner paper management system")]
 struct Cli {
-  /// Verbose mode (-v, -vv, -vvv)
+  /// Verbose mode (-v, -vv, -vvv) for different levels of logging detail
   #[arg(
         short,
         long,
@@ -33,24 +76,28 @@ struct Cli {
     )]
   verbose: u8,
 
+  /// The subcommand to execute
   #[command(subcommand)]
   command: Commands,
 }
 
+/// Available commands for the CLI
 #[derive(Subcommand)]
 enum Commands {
   /// Initialize a new learner database
   Init {
-    /// Path where the database should be created
+    /// Path where the database should be created. If not specified,
+    /// uses the default platform-specific data directory.
     #[arg(long, short)]
     path: Option<PathBuf>,
   },
-  /// Add a paper to the database
+  /// Add a paper to the database by its identifier
   Add {
     /// Paper identifier (arXiv ID, DOI, or IACR ID)
+    /// Examples: "2301.07041", "10.1145/1327452.1327492"
     identifier: String,
   },
-  /// Remove a paper from the database
+  /// Remove a paper from the database by its source and identifier
   Remove {
     /// Source system (arxiv, doi, iacr)
     #[arg(value_enum)]
@@ -58,7 +105,7 @@ enum Commands {
     /// Paper identifier in the source system
     identifier: String,
   },
-  /// Retrieve a paper from the database
+  /// Retrieve and display a paper's details
   Get {
     /// Source system (arxiv, doi, iacr)
     #[arg(value_enum)]
@@ -68,18 +115,29 @@ enum Commands {
   },
   /// Search papers in the database
   Search {
-    /// Search query
+    /// Search query - supports full text search
     query: String,
   },
-  /// Removes the entire database
+  /// Removes the entire database after confirmation
   Clean {
-    /// Path to the database file
+    /// Path to the database file. If not specified,
+    /// uses the default platform-specific data directory.
     #[arg(long, short)]
     path: Option<PathBuf>,
   },
 }
 
-/// Setup logging with the specified verbosity level
+/// Configures the logging system based on the verbosity level
+///
+/// # Arguments
+///
+/// * `verbosity` - Number of times the verbose flag was used (0-3)
+///
+/// The verbosity levels are:
+/// - 0: warn (default)
+/// - 1: info
+/// - 2: debug
+/// - 3+: trace
 fn setup_logging(verbosity: u8) {
   let filter = match verbosity {
     0 => "warn",
@@ -99,6 +157,19 @@ fn setup_logging(verbosity: u8) {
     .init();
 }
 
+/// Entry point for the learnerd CLI application
+///
+/// Handles command line argument parsing, sets up logging, and executes
+/// the requested command. All commands provide colored output and
+/// interactive confirmations for destructive operations.
+///
+/// # Errors
+///
+/// Returns `LearnerdErrors` for various failure conditions including:
+/// - Database operations failures
+/// - Paper fetching failures
+/// - File system errors
+/// - User interaction errors
 #[tokio::main]
 async fn main() -> Result<(), LearnerdErrors> {
   let cli = Cli::parse();
