@@ -1,6 +1,6 @@
 [package]
 name        = "learnerd"
-version     = "0.1.2"
+version     = "0.1.0"
 edition     = "2021"
 description = "A simple daemon for learning stuff"
 authors     = ["Colin Roberts"]
