@@ -3,7 +3,7 @@
 //!
 //! # Example
 //! ```rust,no_run
-//! use learnerd::{Paper, Source};
+//! use learner::{Paper, Source};
 //!
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
@@ -88,7 +88,7 @@ impl Paper {
   ///
   /// # Example
   /// ```rust,no_run
-  /// # use learnerd::Paper;
+  /// # use learner::Paper;
   /// # async fn run() -> anyhow::Result<()> {
   /// // All of these are valid:
   /// let paper1 = Paper::new("https://arxiv.org/abs/2301.07041").await?;
