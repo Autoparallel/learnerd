@@ -16,7 +16,7 @@
 //! ```
 
 #![warn(missing_docs, clippy::missing_docs_in_private_items)]
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ pub mod database;
 pub mod errors;
 pub mod paper;
 
-use clients::{arxiv::ArxivClient, doi::DOIClient, iacr::IACRClient};
+use clients::{ArxivClient, DOIClient, IACRClient};
 use database::Database;
 use errors::LearnerError;
 use paper::{Author, Paper, Source};

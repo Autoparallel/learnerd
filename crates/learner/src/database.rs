@@ -1,20 +1,86 @@
-use std::{
-  path::{Path, PathBuf},
-  str::FromStr,
-};
+//! Local SQLite database management for storing and retrieving papers.
+//!
+//! This module provides functionality to persist paper metadata in a local SQLite database.
+//! It supports:
+//! - Paper metadata storage and retrieval
+//! - Author information management
+//! - Full-text search across papers
+//! - Source-specific identifier lookups
+//!
+//! The database schema is automatically initialized when opening a database, and includes
+//! tables for papers, authors, and full-text search indexes.
+//!
+//! # Examples
+//!
+//! ```no_run
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Open or create a database
+//! let db = learner::database::Database::open("papers.db").await?;
+//!
+//! // Fetch and save a paper
+//! let paper = learner::paper::Paper::new("2301.07041").await?;
+//! let id = db.save_paper(&paper).await?;
+//!
+//! // Search for papers
+//! let results = db.search_papers("neural networks").await?;
+//! for paper in results {
+//!   println!("Found: {}", paper.title);
+//! }
+//! # Ok(())
+//! # }
+//! ```
+
+use std::path::Path;
 
 use rusqlite::params;
 use tokio_rusqlite::Connection;
 
 use super::*;
 
-/// Database handle for learner
+/// Handle for interacting with the paper database.
+///
+/// This struct manages an async connection to a SQLite database and provides
+/// methods for storing and retrieving paper metadata. It uses SQLite's full-text
+/// search capabilities for efficient paper discovery.
+///
+/// The database is automatically initialized with the required schema when opened.
+/// If the database file doesn't exist, it will be created.
 pub struct Database {
+  /// Async SQLite connection handle
   conn: Connection,
 }
 
 impl Database {
-  /// Open or create a database at the specified path
+  /// Opens an existing database or creates a new one at the specified path.
+  ///
+  /// This method will:
+  /// 1. Create the database file if it doesn't exist
+  /// 2. Initialize the schema using migrations
+  /// 3. Set up full-text search indexes
+  ///
+  /// # Arguments
+  ///
+  /// * `path` - Path where the database file should be created or opened
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing either:
+  /// - A [`Database`] handle for database operations
+  /// - A [`LearnerError`] if database creation or initialization fails
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # use learner::database::Database;
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// // Open in a specific location
+  /// let db = Database::open("papers.db").await?;
+  ///
+  /// // Or use the default location
+  /// let db = Database::open(Database::default_path()).await?;
+  /// # Ok(())
+  /// # }
+  /// ```
   pub async fn open(path: impl AsRef<Path>) -> Result<Self, LearnerError> {
     let conn = Connection::open(path.as_ref()).await?;
 
@@ -32,12 +98,55 @@ impl Database {
     Ok(Self { conn })
   }
 
-  /// Get default database path in user's data directory
+  /// Returns the default path for the database file.
+  ///
+  /// The path is constructed as follows:
+  /// - On Unix: `~/.local/share/learner/learner.db`
+  /// - On macOS: `~/Library/Application Support/learner/learner.db`
+  /// - On Windows: `%APPDATA%\learner\learner.db`
+  /// - Fallback: `./learner.db` in the current directory
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// let path = learner::database::Database::default_path();
+  /// println!("Database will be stored at: {}", path.display());
+  /// ```
   pub fn default_path() -> PathBuf {
     dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("learner").join("learner.db")
   }
 
-  /// Save a paper to the database
+  /// Saves a paper and its authors to the database.
+  ///
+  /// This method will:
+  /// 1. Insert the paper's metadata into the papers table
+  /// 2. Insert all authors into the authors table
+  /// 3. Update the full-text search index
+  ///
+  /// The operation is performed in a transaction to ensure data consistency.
+  ///
+  /// # Arguments
+  ///
+  /// * `paper` - The paper to save
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing either:
+  /// - The database ID of the saved paper
+  /// - A [`LearnerError`] if the save operation fails
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # use learner::{database::Database, paper::Paper};
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// let db = Database::open("papers.db").await?;
+  /// let paper = Paper::new("2301.07041").await?;
+  /// let id = db.save_paper(&paper).await?;
+  /// println!("Saved paper with ID: {}", id);
+  /// # Ok(())
+  /// # }
+  /// ```
   pub async fn save_paper(&self, paper: &Paper) -> Result<i64, LearnerError> {
     let paper = paper.clone();
     self
@@ -88,7 +197,36 @@ impl Database {
       .map_err(LearnerError::from)
   }
 
-  /// Get a paper by its source and identifier
+  /// Retrieves a paper using its source and identifier.
+  ///
+  /// This method looks up a paper based on its origin (e.g., arXiv, DOI)
+  /// and its source-specific identifier. It also fetches all associated
+  /// author information.
+  ///
+  /// # Arguments
+  ///
+  /// * `source` - The paper's source system (arXiv, IACR, DOI)
+  /// * `source_id` - The source-specific identifier
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing either:
+  /// - `Some(Paper)` if found
+  /// - `None` if no matching paper exists
+  /// - A [`LearnerError`] if the query fails
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # use learner::{database::Database, paper::Source};
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// let db = Database::open("papers.db").await?;
+  /// if let Some(paper) = db.get_paper_by_source_id(&Source::Arxiv, "2301.07041").await? {
+  ///   println!("Found paper: {}", paper.title);
+  /// }
+  /// # Ok(())
+  /// # }
+  /// ```
   pub async fn get_paper_by_source_id(
     &self,
     source: &Source,
@@ -153,7 +291,41 @@ impl Database {
       .map_err(LearnerError::from)
   }
 
-  /// Search papers using FTS
+  /// Searches for papers using full-text search.
+  ///
+  /// This method uses SQLite's FTS5 module to perform full-text search across:
+  /// - Paper titles
+  /// - Paper abstracts
+  ///
+  /// Results are ordered by relevance using FTS5's built-in ranking algorithm.
+  ///
+  /// # Arguments
+  ///
+  /// * `query` - The search query using FTS5 syntax
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing either:
+  /// - A vector of matching papers
+  /// - A [`LearnerError`] if the search fails
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// let db = learner::database::Database::open("papers.db").await?;
+  ///
+  /// // Simple word search
+  /// let papers = db.search_papers("quantum").await?;
+  ///
+  /// // Phrase search
+  /// let papers = db.search_papers("\"neural networks\"").await?;
+  ///
+  /// // Complex query
+  /// let papers = db.search_papers("machine learning NOT regression").await?;
+  /// # Ok(())
+  /// # }
+  /// ```
   pub async fn search_papers(&self, query: &str) -> Result<Vec<Paper>, LearnerError> {
     // Clone the query before moving into the async closure
     let query = query.to_string();

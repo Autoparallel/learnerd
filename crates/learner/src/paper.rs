@@ -55,7 +55,7 @@ impl std::fmt::Display for Source {
   }
 }
 
-impl std::str::FromStr for Source {
+impl FromStr for Source {
   type Err = LearnerError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -224,7 +224,7 @@ impl Paper {
   /// - The paper has no PDF URL available
   /// - The download fails
   /// - Writing to the specified path fails
-  pub async fn download_pdf(&self, path: PathBuf) -> Result<(), LearnerError> {
+  pub async fn download_pdf(&self, _path: PathBuf) -> Result<(), LearnerError> {
     unimplemented!("Work in progress -- needs integrated with `Database`");
     // let Some(pdf_url) = &self.pdf_url else {
     //   return Err(LearnerError::ApiError("No PDF URL available".into()));
@@ -234,7 +234,7 @@ impl Paper {
     // let bytes = response.bytes().await?;
     // // TODO: Replace this with a nicer error.
     // std::fs::write(path, bytes).unwrap();
-    Ok(())
+    // Ok(())
   }
 
   /// Save the paper to a database.
