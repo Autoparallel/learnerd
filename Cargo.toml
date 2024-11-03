@@ -7,8 +7,8 @@ authors    = ["Colin Roberts"]
 edition    = "2021"
 keywords   = ["learning", "research", "automation", "papers"]
 license    = "Apache-2.0"
-repository = "https://github.com/autoparallel/learner"
 readme     = "README.md"
+repository = "https://github.com/autoparallel/learner"
 
 [workspace.dependencies]
 chrono         = { version = "0.4", features = ["serde"] }
