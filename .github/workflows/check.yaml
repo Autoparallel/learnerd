@@ -103,7 +103,7 @@ jobs:
         run: cargo udeps
 
   semver:
-    name: semver check
+    name: semver
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
