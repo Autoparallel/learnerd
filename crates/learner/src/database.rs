@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+  path::{Path, PathBuf},
+  str::FromStr,
+};
 
 use rusqlite::params;
 use tokio_rusqlite::Connection;
@@ -116,7 +119,9 @@ impl Database {
             title:             row.get(1)?,
             abstract_text:     row.get(2)?,
             publication_date:  row.get(3)?,
-            source:            serde_json::from_str(&row.get::<_, String>(4)?).unwrap(),
+            source:            Source::from_str(&row.get::<_, String>(4)?).map_err(|e| {
+              rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(e))
+            })?,
             source_identifier: row.get(5)?,
             pdf_url:           row.get(6)?,
             doi:               row.get(7)?,
@@ -170,7 +175,9 @@ impl Database {
             title:             row.get(1)?,
             abstract_text:     row.get(2)?,
             publication_date:  row.get(3)?,
-            source:            serde_json::from_str(&row.get::<_, String>(4)?).unwrap(),
+            source:            Source::from_str(&row.get::<_, String>(4)?).map_err(|e| {
+              rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(e))
+            })?,
             source_identifier: row.get(5)?,
             pdf_url:           row.get(6)?,
             doi:               row.get(7)?,
@@ -191,9 +198,7 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
-  use std::fs;
 
-  use chrono::TimeZone;
   use tempfile::tempdir;
 
   use super::*;
@@ -240,18 +245,19 @@ mod tests {
   }
 
   #[tokio::test]
-  async fn test_save_and_retrieve_paper() -> Result<(), LearnerError> {
+  async fn test_save_and_retrieve_paper() {
     let (db, _dir) = setup_test_db().await;
     let paper = create_test_paper();
 
     // Save paper
-    let paper_id = db.save_paper(&paper).await?;
+    let paper_id = db.save_paper(&paper).await.unwrap();
     assert!(paper_id > 0);
 
     // Retrieve paper
     let retrieved = db
       .get_paper_by_source_id(&paper.source, &paper.source_identifier)
-      .await?
+      .await
+      .unwrap()
       .expect("Paper should exist");
 
     // Verify paper data
@@ -271,22 +277,19 @@ mod tests {
     assert_eq!(retrieved.authors[1].name, paper.authors[1].name);
     assert_eq!(retrieved.authors[1].affiliation, None);
     assert_eq!(retrieved.authors[1].email, None);
-
-    Ok(())
   }
 
   #[tokio::test]
-  async fn test_get_nonexistent_paper() -> Result<(), LearnerError> {
+  async fn test_get_nonexistent_paper() {
     let (db, _dir) = setup_test_db().await;
 
-    let result = db.get_paper_by_source_id(&Source::Arxiv, "nonexistent").await?;
+    let result = db.get_paper_by_source_id(&Source::Arxiv, "nonexistent").await.unwrap();
 
     assert!(result.is_none());
-    Ok(())
   }
 
   #[tokio::test]
-  async fn test_full_text_search() -> Result<(), LearnerError> {
+  async fn test_full_text_search() {
     let (db, _dir) = setup_test_db().await;
 
     // Save a few papers
@@ -300,27 +303,25 @@ mod tests {
     paper2.abstract_text = "Classical computer science topics".to_string();
     paper2.source_identifier = "2401.00002".to_string();
 
-    db.save_paper(&paper1).await?;
-    db.save_paper(&paper2).await?;
+    db.save_paper(&paper1).await.unwrap();
+    db.save_paper(&paper2).await.unwrap();
 
     // Search for papers
-    let results = db.search_papers("neural").await?;
+    let results = db.search_papers("neural").await.unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, paper1.title);
 
-    let results = db.search_papers("learning").await?;
+    let results = db.search_papers("learning").await.unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].source_identifier, paper1.source_identifier);
 
-    let results = db.search_papers("algorithms").await?;
+    let results = db.search_papers("algorithms").await.unwrap();
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].title, paper2.title);
-
-    Ok(())
   }
 
   #[tokio::test]
-  async fn test_duplicate_paper_handling() -> Result<(), LearnerError> {
+  async fn test_duplicate_paper_handling() {
     let (db, _dir) = setup_test_db().await;
     let paper = create_test_paper();
 
@@ -331,7 +332,5 @@ mod tests {
     // Try to save the same paper again
     let result2 = db.save_paper(&paper).await;
     assert!(result2.is_err()); // Should fail due to UNIQUE constraint
-
-    Ok(())
   }
 }
