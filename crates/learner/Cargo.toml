@@ -1,29 +1,30 @@
 [package]
-name          = "learner"
-version       = "0.1.2"
-edition       = "2021"
-description   = "A simple library for learning stuff"
-authors       = ["Colin Roberts"]
-repository    = "https://github.com/autoparallel/learner"
-license       = "Apache-2.0"
-documentation = "https://docs.rs/learner"
-readme        = "README.md"
-keywords      = ["learning", "research", "automation", "papers"]
+name                 = "learner"
+version              = "0.1.2"
+edition.workspace    = true
+description          = "A simple library for learning stuff"
+authors.workspace    = true
+repository.workspace = true
+license.workspace    = true
+documentation        = "https://docs.rs/learner"
+readme               = "README.md"
+keywords.workspace   = true
 
 [dependencies]
-tokio       = { version = "1.41", features = ["full"] }
-reqwest     = { version = "0.12", features = ["json"] }
-serde       = { version = "1.0", features = ["derive"] }
-serde_json  = "1.0"
-thiserror   = "1.0"
-url         = "2.5"
-regex       = "1.11"
-chrono      = { version = "0.4", features = ["serde"] }
-tracing     = "0.1"
-quick-xml   = { version = "0.37", features = ["serialize"] }
-lazy_static = "1.5"
+tokio       = { workspace = true }
+reqwest     = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+thiserror   = { workspace = true }
+url         = { workspace = true }
+regex       = { workspace = true }
+chrono      = { workspace = true }
+tracing     = { workspace = true }
+quick-xml   = { workspace = true }
+lazy_static = { workspace = true }
+sqlx        = { workspace = true }
 
 [dev-dependencies]
-tokio-test   = "0.4"
-tracing-test = "0.2"
-anyhow       = "1.0"
+tokio-test   = { workspace = true }
+tracing-test = { workspace = true }
+anyhow       = { workspace = true }
