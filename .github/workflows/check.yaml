@@ -97,7 +97,28 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-udeps-
 
       - name: Install cargo-udeps
-        run: cargo install cargo-udeps --locked || true
+        run: which cargo-udeps || cargo install cargo-udeps --locked
 
       - name: Check unused dependencies
         run: cargo udeps
+
+  semver:
+    name: semver
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-semver-checks
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-semver-checks
+          version: latest
+
+      - name: Run semver checks
+        run: cargo semver-checks check-release
