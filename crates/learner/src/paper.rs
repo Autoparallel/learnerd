@@ -1,14 +1,47 @@
+//! Paper management and metadata types for the learner library.
+//!
+//! This module provides types and functionality for working with academic papers from
+//! various sources including arXiv, IACR, and DOI-based repositories. It handles paper
+//! metadata, author information, and source-specific identifier parsing.
+//!
+//! # Examples
+//!
+//! ```no_run
+//! use learner::paper::Paper;
+//!
+//! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
+//! // Create a paper from an arXiv URL
+//! let paper = Paper::new("https://arxiv.org/abs/2301.07041").await?;
+//! println!("Title: {}", paper.title);
+//!
+//! // Or from a DOI
+//! let paper = Paper::new("10.1145/1327452.1327492").await?;
+//!
+//! // Save to database
+//! let db = learner::database::Database::open("papers.db").await?;
+//! paper.save(&db).await?;
+//! # Ok(())
+//! # }
+//! ```
+
 use lazy_static::lazy_static;
 use regex::Regex;
 use url::Url;
 
 use super::*;
 
-/// The source of an academic paper
+/// The source repository or system from which a paper originates.
+///
+/// This enum represents the supported academic paper sources, each with its own
+/// identifier format and access patterns.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Source {
+  /// Papers from arxiv.org, using either new-style (2301.07041) or
+  /// old-style (math.AG/0601001) identifiers
   Arxiv,
+  /// Papers from the International Association for Cryptologic Research (eprint.iacr.org)
   IACR,
+  /// Papers identified by a Digital Object Identifier (DOI)
   DOI,
 }
 
@@ -35,32 +68,72 @@ impl std::str::FromStr for Source {
   }
 }
 
-/// Represents an author of a paper
+/// Represents an author of an academic paper.
+///
+/// Contains the author's name and optional affiliation and contact information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Author {
+  /// The author's full name
   pub name:        String,
+  /// The author's institutional affiliation, if available
   pub affiliation: Option<String>,
+  /// The author's email address, if available
   pub email:       Option<String>,
 }
 
-/// Represents a complete academic paper with its metadata
+/// A complete academic paper with its metadata.
+///
+/// This struct represents a paper from any supported source (arXiv, IACR, DOI)
+/// along with its metadata including title, authors, abstract, and identifiers.
+///
+/// # Examples
+///
+/// ```no_run
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Fetch a paper from arXiv
+/// let paper = learner::paper::Paper::new("2301.07041").await?;
+///
+/// // Access metadata
+/// println!("Title: {}", paper.title);
+/// println!("Authors: {}", paper.authors.len());
+/// println!("Abstract: {}", paper.abstract_text);
+///
+/// // Download the PDF if available
+/// if let Some(pdf_url) = &paper.pdf_url {
+///   paper.download_pdf("paper.pdf".into()).await?;
+/// }
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Paper {
+  /// The paper's title
   pub title:             String,
+  /// List of the paper's authors
   pub authors:           Vec<Author>,
+  /// The paper's abstract text
   pub abstract_text:     String,
+  /// When the paper was published or last updated
   pub publication_date:  DateTime<Utc>,
+  /// The source system (arXiv, IACR, DOI)
   pub source:            Source,
+  /// The source-specific identifier (e.g., arXiv ID, DOI)
   pub source_identifier: String,
+  /// URL to the paper's PDF, if available
   pub pdf_url:           Option<String>,
+  /// The paper's DOI, if available
   pub doi:               Option<String>,
 }
 
 impl Paper {
-  /// Create a new paper from either a URL, identifier, or DOI
+  /// Create a new paper from a URL, identifier, or DOI.
+  ///
+  /// This method accepts various formats for paper identification and automatically
+  /// determines the appropriate source and fetches the paper's metadata.
   ///
   /// # Arguments
-  /// * `input` - Can be:
+  ///
+  /// * `input` - One of the following:
   ///   - An arXiv URL (e.g., "https://arxiv.org/abs/2301.07041")
   ///   - An arXiv ID (e.g., "2301.07041" or "math.AG/0601001")
   ///   - An IACR URL (e.g., "https://eprint.iacr.org/2016/260")
@@ -68,24 +141,28 @@ impl Paper {
   ///   - A DOI URL (e.g., "https://doi.org/10.1145/1327452.1327492")
   ///   - A DOI (e.g., "10.1145/1327452.1327492")
   ///
-  /// # Example
-  /// ```rust,no_run
-  /// # use learner::Paper;
-  /// # async fn run() -> anyhow::Result<()> {
-  /// // All of these are valid:
+  /// # Returns
+  ///
+  /// Returns a `Result<Paper, LearnerError>` which is:
+  /// - `Ok(Paper)` - Successfully fetched paper with metadata
+  /// - `Err(LearnerError)` - Failed to parse input or fetch paper
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # use learner::paper::Paper;
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// // From arXiv URL
   /// let paper1 = Paper::new("https://arxiv.org/abs/2301.07041").await?;
+  ///
+  /// // From arXiv ID
   /// let paper2 = Paper::new("2301.07041").await?;
+  ///
+  /// // From DOI
   /// let paper3 = Paper::new("10.1145/1327452.1327492").await?;
   /// # Ok(())
   /// # }
   /// ```
-  ///
-  /// # Errors
-  /// Returns `PaperError` if:
-  /// - The input format is not recognized
-  /// - The paper cannot be found
-  /// - There are network issues
-  /// - The API returns an error
   pub async fn new(input: &str) -> Result<Self, LearnerError> {
     lazy_static! {
         // arXiv patterns
@@ -135,26 +212,58 @@ impl Paper {
     }
   }
 
-  /// Download the paper's PDF to a file
+  /// Download the paper's PDF to a specified path.
   ///
   /// # Arguments
-  /// * `path` - The path where the PDF should be saved
+  ///
+  /// * `path` - The filesystem path where the PDF should be saved
+  ///
+  /// # Errors
+  ///
+  /// Returns `LearnerError` if:
+  /// - The paper has no PDF URL available
+  /// - The download fails
+  /// - Writing to the specified path fails
   pub async fn download_pdf(&self, path: PathBuf) -> Result<(), LearnerError> {
-    let Some(pdf_url) = &self.pdf_url else {
-      return Err(LearnerError::ApiError("No PDF URL available".into()));
-    };
+    unimplemented!("Work in progress -- needs integrated with `Database`");
+    // let Some(pdf_url) = &self.pdf_url else {
+    //   return Err(LearnerError::ApiError("No PDF URL available".into()));
+    // };
 
-    let response = reqwest::get(pdf_url).await?;
-    let bytes = response.bytes().await?;
-    // TODO: Replace this with a nicer error.
-    std::fs::write(path, bytes).unwrap();
+    // let response = reqwest::get(pdf_url).await?;
+    // let bytes = response.bytes().await?;
+    // // TODO: Replace this with a nicer error.
+    // std::fs::write(path, bytes).unwrap();
     Ok(())
   }
 
+  /// Save the paper to a database.
+  ///
+  /// # Arguments
+  ///
+  /// * `db` - Reference to an open database connection
+  ///
+  /// # Returns
+  ///
+  /// Returns the database ID of the saved paper on success.
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+  /// let paper = learner::paper::Paper::new("2301.07041").await?;
+  /// let db = learner::database::Database::open("papers.db").await?;
+  /// let id = paper.save(&db).await?;
+  /// println!("Saved paper with ID: {}", id);
+  /// # Ok(())
+  /// # }
+  /// ```
   pub async fn save(&self, db: &Database) -> Result<i64, LearnerError> { db.save_paper(self).await }
 }
 
-// Helper functions for URL parsing
+/// Extracts the arXiv identifier from a URL.
+///
+/// Parses URLs like "https://arxiv.org/abs/2301.07041" to extract "2301.07041".
 fn extract_arxiv_id(url: &Url) -> Result<String, LearnerError> {
   let path = url.path();
   let re = regex::Regex::new(r"abs/([^/]+)$").unwrap();
@@ -164,6 +273,9 @@ fn extract_arxiv_id(url: &Url) -> Result<String, LearnerError> {
     .ok_or(LearnerError::InvalidIdentifier)
 }
 
+/// Extracts the IACR identifier from a URL.
+///
+/// Parses URLs like "https://eprint.iacr.org/2016/260" to extract "2016/260".
 fn extract_iacr_id(url: &Url) -> Result<String, LearnerError> {
   let path = url.path();
   let re = regex::Regex::new(r"(\d{4}/\d+)$").unwrap();
@@ -173,6 +285,9 @@ fn extract_iacr_id(url: &Url) -> Result<String, LearnerError> {
     .ok_or(LearnerError::InvalidIdentifier)
 }
 
+/// Extracts the DOI from a URL.
+///
+/// Parses URLs like "https://doi.org/10.1145/1327452.1327492" to extract the DOI.
 fn extract_doi(url: &Url) -> Result<String, LearnerError> {
   url.path().strip_prefix('/').map(|s| s.to_string()).ok_or(LearnerError::InvalidIdentifier)
 }

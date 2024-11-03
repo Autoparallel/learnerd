@@ -2,11 +2,11 @@
 //! including arXiv, IACR, and DOI-based repositories.
 //!
 //! # Example
-//! ```rust,no_run
-//! use learner::{Paper, Source};
+//! ```no_run
+//! use learner::paper::{Paper, Source};
 //!
 //! #[tokio::main]
-//! async fn main() -> anyhow::Result<()> {
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!   // Fetch from arXiv
 //!   let paper = Paper::new("2301.07041").await?;
 //!   println!("Title: {}", paper.title);

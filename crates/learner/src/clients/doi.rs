@@ -12,7 +12,7 @@ struct CrossrefWork {
   title:            Vec<String>,
   author:           Vec<CrossrefAuthor>,
   #[serde(rename = "abstract")]
-  paper_abstract:   Option<String>,
+  abstract_text:    Option<String>,
   published_print:  Option<CrossrefDate>,
   published_online: Option<CrossrefDate>,
   #[serde(rename = "URL")]
@@ -129,7 +129,7 @@ impl DOIClient {
     Ok(Paper {
       title,
       authors,
-      abstract_text: work.paper_abstract.unwrap_or_default(),
+      abstract_text: work.abstract_text.unwrap_or_default(),
       publication_date,
       source: Source::DOI,
       source_identifier: doi.to_string(),
