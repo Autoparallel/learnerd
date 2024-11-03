@@ -45,7 +45,7 @@ struct DublinCore {
   #[serde(rename = "description")]
   description: String,
   #[serde(rename = "date")]
-  date:        String,
+  dates:       Vec<String>,
   #[serde(rename = "identifier")]
   identifiers: Vec<String>,
 }
@@ -67,7 +67,6 @@ impl IACRClient {
       return Err(PaperError::InvalidIdentifier);
     }
 
-    // Construct OAI-PMH request URL with Dublin Core format
     let url = format!(
       "{}?verb=GetRecord&identifier=oai:eprint.iacr.org:{}&metadataPrefix=oai_dc",
       self.base_url, identifier
@@ -80,10 +79,20 @@ impl IACRClient {
     let text = response.text().await?;
     debug!("IACR OAI-PMH response: {}", text);
 
+    // Clean up the XML to handle namespaces
+    let text = text
+            .replace("xmlns:oai_dc=\"http://www.openarchives.org/OAI/2.0/oai_dc/\"", "")
+            .replace("xmlns:dc=\"http://purl.org/dc/elements/1.1/\"", "")
+            .replace("xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"", "")
+            .replace("xsi:schemaLocation=\"http://www.openarchives.org/OAI/2.0/oai_dc/ http://www.openarchives.org/OAI/2.0/oai_dc.xsd\"", "")
+            .replace("oai_dc:", "")
+            .replace("dc:", "");
+
+    debug!("Cleaned XML: {}", text);
+
     let oai_response: OAIPMHResponse =
       from_str(&text).map_err(|e| PaperError::ApiError(format!("Failed to parse XML: {}", e)))?;
 
-    // Check for errors first
     if let Some(error) = oai_response.error {
       return Err(PaperError::ApiError(format!(
         "OAI-PMH error: {} - {}",
@@ -98,33 +107,16 @@ impl IACRClient {
 
     let dc = record.metadata.dublin_core;
 
-    // Find DOI from identifiers (usually starts with "10.")
-    let doi = dc.identifiers.iter().find(|id| id.starts_with("10.")).cloned();
+    // Try to find a URL-style identifier starting with https://eprint.iacr.org/
+    let doi = dc.identifiers.iter().find(|id| id.starts_with("https://eprint.iacr.org/")).cloned();
 
-    // Parse date (usually in YYYY-MM-DD format)
-    let publication_date = if let Some(date_str) = dc.date.split_whitespace().next() {
-      let parts: Vec<&str> = date_str.split('-').collect();
-      if parts.len() >= 3 {
-        Utc
-          .with_ymd_and_hms(
-            parts[0].parse().unwrap_or(2000),
-            parts[1].parse().unwrap_or(1),
-            parts[2].parse().unwrap_or(1),
-            0,
-            0,
-            0,
-          )
-          .single()
-          .ok_or_else(|| PaperError::ApiError("Invalid date".to_string()))?
-      } else {
-        Utc
-          .with_ymd_and_hms(parts[0].parse().unwrap_or(2000), 1, 1, 0, 0, 0)
-          .single()
-          .ok_or_else(|| PaperError::ApiError("Invalid date".to_string()))?
-      }
-    } else {
-      return Err(PaperError::ApiError("No date found".to_string()));
-    };
+    // Parse the earliest date (creation date)
+    let publication_date = dc
+      .dates
+      .first()
+      .and_then(|date_str| DateTime::parse_from_rfc3339(date_str).ok())
+      .map(|dt| dt.with_timezone(&Utc))
+      .ok_or_else(|| PaperError::ApiError("Invalid date format".to_string()))?;
 
     Ok(Paper {
       title: dc.title,
@@ -159,8 +151,7 @@ mod tests {
     let client = IACRClient::new();
     let paper = client.fetch_paper("2016/260").await.unwrap();
 
-    println!("Title: {}", paper.title);
-    println!("Authors: {:?}", paper.authors);
+    dbg!(&paper);
 
     assert!(!paper.title.is_empty());
     assert!(!paper.authors.is_empty());
