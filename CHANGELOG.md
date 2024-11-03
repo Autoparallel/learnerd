@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3](https://github.com/Autoparallel/learner/compare/v0.1.2...v0.1.3) - 2024-11-03
+
+### Fixed
+- label workflow ([#18](https://github.com/Autoparallel/learner/pull/18))
+- label workflow ([#17](https://github.com/Autoparallel/learner/pull/17))
+
+### Other
+- labels ([#15](https://github.com/Autoparallel/learner/pull/15))
+- bug report template ([#13](https://github.com/Autoparallel/learner/pull/13))
+- templates ([#11](https://github.com/Autoparallel/learner/pull/11))
+
 ## [0.1.2](https://github.com/Autoparallel/learner/compare/v0.1.1...v0.1.2) - 2024-11-03
 
 ### Added
