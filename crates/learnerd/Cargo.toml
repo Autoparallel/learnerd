@@ -8,3 +8,16 @@ name                 = "learnerd"
 readme.workspace     = true
 repository.workspace = true
 version              = "0.1.0"
+
+[dependencies]
+learner.workspace = true
+
+clap.workspace               = true
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+console.workspace            = true
+
+
+[dev-dependencies]
+anyhow = { workspace = true }
