@@ -42,7 +42,7 @@ impl ArxivClient {
   /// # Errors
   ///
   /// This function will return an error if .
-  pub async fn fetch_paper(&self, identifier: &str) -> Result<Paper, PaperError> {
+  pub async fn fetch_paper(&self, identifier: &str) -> Result<Paper, LearnerError> {
     let url = format!("http://export.arxiv.org/api/query?id_list={}&max_results=1", identifier);
 
     debug!("Fetching from arXiv via: {url}");
@@ -52,9 +52,9 @@ impl ArxivClient {
     debug!("arXiv response: {response}");
 
     let feed: Feed = from_str(&response)
-      .map_err(|e| PaperError::ApiError(format!("Failed to parse XML: {}", e)))?;
+      .map_err(|e| LearnerError::ApiError(format!("Failed to parse XML: {}", e)))?;
 
-    let entry = feed.entries.first().ok_or(PaperError::NotFound)?;
+    let entry = feed.entries.first().ok_or(LearnerError::NotFound)?;
 
     // Convert arXiv URL to PDF URL (just need to change /abs/ to /pdf/ and add .pdf)
     let pdf_url = entry.arxiv_url.replace("/abs/", "/pdf/") + ".pdf";

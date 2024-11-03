@@ -11,18 +11,21 @@ readme               = "README.md"
 keywords.workspace   = true
 
 [dependencies]
-tokio       = { workspace = true }
-reqwest     = { workspace = true }
-serde       = { workspace = true }
-serde_json  = { workspace = true }
-thiserror   = { workspace = true }
-url         = { workspace = true }
-regex       = { workspace = true }
-chrono      = { workspace = true }
-tracing     = { workspace = true }
-quick-xml   = { workspace = true }
-lazy_static = { workspace = true }
-sqlx        = { workspace = true }
+tokio          = { workspace = true }
+reqwest        = { workspace = true }
+serde          = { workspace = true }
+serde_json     = { workspace = true }
+thiserror      = { workspace = true }
+url            = { workspace = true }
+regex          = { workspace = true }
+chrono         = { workspace = true }
+tracing        = { workspace = true }
+quick-xml      = { workspace = true }
+lazy_static    = { workspace = true }
+sqlx           = { workspace = true }
+rusqlite       = { workspace = true }
+tokio-rusqlite = { workspace = true }
+dirs           = { workspace = true }
 
 [dev-dependencies]
 tokio-test   = { workspace = true }

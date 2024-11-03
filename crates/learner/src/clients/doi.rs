@@ -71,7 +71,7 @@ impl DOIClient {
     Utc.with_ymd_and_hms(year, month as u32, day as u32, 0, 0, 0).single()
   }
 
-  pub async fn fetch_paper(&self, doi: &str) -> Result<Paper, PaperError> {
+  pub async fn fetch_paper(&self, doi: &str) -> Result<Paper, LearnerError> {
     let url = format!("{}/{}", self.base_url, doi);
     debug!("Fetching from Crossref via: {}", url);
 
@@ -83,7 +83,7 @@ impl DOIClient {
     debug!("Crossref response: {}", text);
 
     let response: CrossrefResponse = serde_json::from_str(&text)
-      .map_err(|e| PaperError::ApiError(format!("Failed to parse JSON: {}", e)))?;
+      .map_err(|e| LearnerError::ApiError(format!("Failed to parse JSON: {}", e)))?;
 
     let work = response.message;
 
@@ -93,7 +93,7 @@ impl DOIClient {
 
     // Get the first title or return an error
     let title =
-      work.title.first().ok_or_else(|| PaperError::ApiError("No title found".into()))?.clone();
+      work.title.first().ok_or_else(|| LearnerError::ApiError("No title found".into()))?.clone();
 
     // Convert Crossref authors to our Author type
     let authors = work
@@ -121,7 +121,7 @@ impl DOIClient {
       .or_else(|| work.published_online.as_ref().and_then(|d| self.parse_date(d)))
       .or_else(|| work.created.as_ref().and_then(|d| self.parse_date(d)))
       .ok_or_else(|| {
-        PaperError::ApiError(format!(
+        LearnerError::ApiError(format!(
           "No valid publication date found. Print: {:?}, Online: {:?}, Created: {:?}",
           work.published_print, work.published_online, work.created
         ))

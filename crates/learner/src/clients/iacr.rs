@@ -60,11 +60,11 @@ impl IACRClient {
     Self { client: reqwest::Client::new(), base_url: "https://eprint.iacr.org/oai".to_string() }
   }
 
-  pub async fn fetch_paper(&self, identifier: &str) -> Result<Paper, PaperError> {
+  pub async fn fetch_paper(&self, identifier: &str) -> Result<Paper, LearnerError> {
     // IACR identifiers are in the format "YYYY/NNNN"
     let parts: Vec<&str> = identifier.split('/').collect();
     if parts.len() != 2 {
-      return Err(PaperError::InvalidIdentifier);
+      return Err(LearnerError::InvalidIdentifier);
     }
 
     let url = format!(
@@ -91,10 +91,10 @@ impl IACRClient {
     debug!("Cleaned XML: {}", text);
 
     let oai_response: OAIPMHResponse =
-      from_str(&text).map_err(|e| PaperError::ApiError(format!("Failed to parse XML: {}", e)))?;
+      from_str(&text).map_err(|e| LearnerError::ApiError(format!("Failed to parse XML: {}", e)))?;
 
     if let Some(error) = oai_response.error {
-      return Err(PaperError::ApiError(format!(
+      return Err(LearnerError::ApiError(format!(
         "OAI-PMH error: {} - {}",
         error.code, error.message
       )));
@@ -102,7 +102,7 @@ impl IACRClient {
 
     let record = oai_response
       .get_record
-      .ok_or_else(|| PaperError::ApiError("No record found".to_string()))?
+      .ok_or_else(|| LearnerError::ApiError("No record found".to_string()))?
       .record;
 
     let dc = record.metadata.dublin_core;
@@ -116,7 +116,7 @@ impl IACRClient {
       .first()
       .and_then(|date_str| DateTime::parse_from_rfc3339(date_str).ok())
       .map(|dt| dt.with_timezone(&Utc))
-      .ok_or_else(|| PaperError::ApiError("Invalid date format".to_string()))?;
+      .ok_or_else(|| LearnerError::ApiError("Invalid date format".to_string()))?;
 
     Ok(Paper {
       title: dc.title,

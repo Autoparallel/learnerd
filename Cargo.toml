@@ -28,6 +28,9 @@ sqlx = { version = "0.8", features = [
     "json",
     "migrate",
 ] }
+rusqlite = { version = "0.32", features = ["bundled", "functions", "chrono"] }
+tokio-rusqlite = "0.6"
+dirs = "5.0"
 
 # Dev dependencies
 tokio-test   = "0.4"
