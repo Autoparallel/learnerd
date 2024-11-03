@@ -9,4 +9,4 @@ allowed_blank_line = 1
 # collapse arrays into one line if they fit
 array_auto_collapse = true
 # alphabetically sort entries not separated by line breaks
-reorder_keys = false
+reorder_keys = true

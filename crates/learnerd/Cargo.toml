@@ -1,19 +1,19 @@
 [package]
-name                 = "learnerd"
-version              = "0.1.0"
-edition.workspace    = true
-description          = "A simple daemon for learning stuff"
 authors.workspace    = true
-repository.workspace = true
-license.workspace    = true
-readme               = "README.md"
+description          = "A simple daemon for learning stuff"
+edition.workspace    = true
 keywords.workspace   = true
+license.workspace    = true
+name                 = "learnerd"
+readme               = "README.md"
+repository.workspace = true
+version              = "0.1.0"
 
 [dependencies]
-learner = { path = "../learner" }
 clap    = { workspace = true }
-tokio   = { workspace = true }
+learner = { path = "../learner" }
 sqlx    = { workspace = true }
+tokio   = { workspace = true }
 
 [dev-dependencies]
 anyhow = { workspace = true }

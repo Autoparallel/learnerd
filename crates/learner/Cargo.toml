@@ -1,33 +1,34 @@
 [package]
-name                 = "learner"
-version              = "0.1.2"
-edition.workspace    = true
-description          = "A simple library for learning stuff"
 authors.workspace    = true
-repository.workspace = true
-license.workspace    = true
+description          = "A simple library for learning stuff"
 documentation        = "https://docs.rs/learner"
-readme               = "README.md"
+edition.workspace    = true
 keywords.workspace   = true
+license.workspace    = true
+name                 = "learner"
+readme               = "README.md"
+repository.workspace = true
+version              = "0.1.2"
 
 [dependencies]
-tokio          = { workspace = true }
+chrono         = { workspace = true }
+dirs           = { workspace = true }
+lazy_static    = { workspace = true }
+quick-xml      = { workspace = true }
+regex          = { workspace = true }
 reqwest        = { workspace = true }
+rusqlite       = { workspace = true }
 serde          = { workspace = true }
 serde_json     = { workspace = true }
-thiserror      = { workspace = true }
-url            = { workspace = true }
-regex          = { workspace = true }
-chrono         = { workspace = true }
-tracing        = { workspace = true }
-quick-xml      = { workspace = true }
-lazy_static    = { workspace = true }
 sqlx           = { workspace = true }
-rusqlite       = { workspace = true }
+thiserror      = { workspace = true }
+tokio          = { workspace = true }
 tokio-rusqlite = { workspace = true }
-dirs           = { workspace = true }
+tracing        = { workspace = true }
+url            = { workspace = true }
 
 [dev-dependencies]
+anyhow       = { workspace = true }
+tempfile     = { workspace = true }
 tokio-test   = { workspace = true }
 tracing-test = { workspace = true }
-anyhow       = { workspace = true }
