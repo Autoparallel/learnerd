@@ -8,3 +8,24 @@ name                 = "learnerd"
 readme.workspace     = true
 repository.workspace = true
 version              = "0.1.0"
+
+[dependencies]
+# learner.workspace = true # for development
+learner = "0.2.1" # for release
+
+clap.workspace               = true
+console.workspace            = true
+dialoguer.workspace          = true
+glob.workspace               = true
+thiserror.workspace          = true
+tokio.workspace              = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+
+
+[dev-dependencies]
+anyhow                = { workspace = true }
+assert_cmd.workspace  = true
+predicates.workspace  = true
+serial_test.workspace = true
+tempfile.workspace    = true

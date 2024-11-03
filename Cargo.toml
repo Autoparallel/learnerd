@@ -11,8 +11,16 @@ readme     = "README.md"
 repository = "https://github.com/autoparallel/learner"
 
 [workspace.dependencies]
+# local
+learner = { path = "crates/learner" }
+
+# shared
+thiserror = "1.0"
+tokio     = { version = "1.41", features = ["full"] }
+tracing   = "0.1"
+
+# learner only
 chrono         = { version = "0.4", features = ["serde"] }
-clap           = { version = "4.0", features = ["derive"] }
 dirs           = "5.0"
 lazy_static    = "1.5"
 quick-xml      = { version = "0.37", features = ["serialize"] }
@@ -21,14 +29,21 @@ reqwest        = { version = "0.12", features = ["json"] }
 rusqlite       = { version = "0.32", features = ["bundled", "functions", "chrono"] }
 serde          = { version = "1.0", features = ["derive"] }
 serde_json     = "1.0"
-thiserror      = "1.0"
-tokio          = { version = "1.41", features = ["full"] }
 tokio-rusqlite = "0.6"
-tracing        = "0.1"
 url            = "2.5"
 
-# Dev dependencies
+# learnerd only
+clap               = { version = "4.0", features = ["derive"] }
+console            = "0.15"
+dialoguer          = "0.11"
+glob               = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# dev only
 anyhow       = "1.0"
+assert_cmd   = "2.0"
+predicates   = "3.1"
+serial_test  = "3.1"
 tempfile     = "3.13"
 tokio-test   = "0.4"
 tracing-test = "0.2"
