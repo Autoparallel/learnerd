@@ -517,6 +517,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "learnerd"
+version = "0.1.2"
+
+[[package]]
 name = "libc"
 version = "0.2.161"
 source = "registry+https://github.com/rust-lang/crates.io-index"
