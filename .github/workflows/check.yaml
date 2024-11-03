@@ -97,7 +97,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-udeps-
 
       - name: Install cargo-udeps
-        run: cargo install cargo-udeps --locked
+        run: cargo install cargo-udeps --locked || true
 
       - name: Check unused dependencies
         run: cargo udeps
