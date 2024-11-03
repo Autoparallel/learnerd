@@ -35,15 +35,15 @@ fn test_init_and_clean() {
 
   assert!(db_path.exists());
 
-  // Clean with confirmation
+  // Clean with force flag
   learnerd()
-    .arg("clean")
-    .arg("--path")
-    .arg(&db_path)
-    .write_stdin("y\nDELETE\n")
-    .assert()
-    .success()
-    .stdout(predicate::str::contains("Database files cleaned"));
+        .arg("clean")
+        .arg("--path")
+        .arg(&db_path)
+        .arg("--force")  // Add force flag instead of write_stdin
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Database files cleaned"));
 
   assert!(!db_path.exists());
   dir.close().unwrap();

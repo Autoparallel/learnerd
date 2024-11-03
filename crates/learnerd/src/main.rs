@@ -76,6 +76,11 @@ struct Cli {
     )]
   verbose: u8,
 
+  /// Path to the database file. This is where the database will be created or referenced from. If
+  /// not specified, uses the default platform-specific data directory.
+  #[arg(long, short, global = true)]
+  path: Option<PathBuf>,
+
   /// The subcommand to execute
   #[command(subcommand)]
   command: Commands,
@@ -85,12 +90,7 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
   /// Initialize a new learner database
-  Init {
-    /// Path where the database should be created. If not specified,
-    /// uses the default platform-specific data directory.
-    #[arg(long, short)]
-    path: Option<PathBuf>,
-  },
+  Init,
   /// Add a paper to the database by its identifier
   Add {
     /// Paper identifier (arXiv ID, DOI, or IACR ID)
@@ -120,10 +120,9 @@ enum Commands {
   },
   /// Removes the entire database after confirmation
   Clean {
-    /// Path to the database file. If not specified,
-    /// uses the default platform-specific data directory.
+    /// Skip confirmation prompts
     #[arg(long, short)]
-    path: Option<PathBuf>,
+    force: bool,
   },
 }
 
@@ -176,8 +175,8 @@ async fn main() -> Result<(), LearnerdErrors> {
   setup_logging(cli.verbose);
 
   match cli.command {
-    Commands::Init { path } => {
-      let path = path.unwrap_or_else(|| {
+    Commands::Init => {
+      let path = cli.path.unwrap_or_else(|| {
         let default_path = Database::default_path();
         println!(
           "{} Using default database path: {}",
@@ -428,8 +427,8 @@ async fn main() -> Result<(), LearnerdErrors> {
       Ok(())
     },
 
-    Commands::Clean { path } => {
-      let path = path.unwrap_or_else(Database::default_path);
+    Commands::Clean { force } => {
+      let path = cli.path.unwrap_or_else(Database::default_path);
       if path.exists() {
         println!(
           "{} Database found at: {}",
@@ -437,29 +436,32 @@ async fn main() -> Result<(), LearnerdErrors> {
           style(path.display()).yellow()
         );
 
-        // First confirmation
-        if !dialoguer::Confirm::new()
-          .with_prompt("Are you sure you want to delete this database?")
-          .default(false)
-          .wait_for_newline(true)
-          .interact()?
-        {
-          println!("{} Operation cancelled", style("✖").red());
-          return Ok(());
-        }
+        // Skip confirmations if force flag is set
+        if !force {
+          // First confirmation
+          if !dialoguer::Confirm::new()
+            .with_prompt("Are you sure you want to delete this database?")
+            .default(false)
+            .wait_for_newline(true)
+            .interact()?
+          {
+            println!("{} Operation cancelled", style("✖").red());
+            return Ok(());
+          }
 
-        // Require typing DELETE for final confirmation
-        let input = dialoguer::Input::<String>::new()
-          .with_prompt(&format!(
-            "{} Type {} to confirm deletion",
-            style("⚠️").red(),
-            style("DELETE").red().bold()
-          ))
-          .interact_text()?;
+          // Require typing DELETE for final confirmation
+          let input = dialoguer::Input::<String>::new()
+            .with_prompt(&format!(
+              "{} Type {} to confirm deletion",
+              style("⚠️").red(),
+              style("DELETE").red().bold()
+            ))
+            .interact_text()?;
 
-        if input != "DELETE" {
-          println!("{} Operation cancelled", style("✖").red());
-          return Ok(());
+          if input != "DELETE" {
+            println!("{} Operation cancelled", style("✖").red());
+            return Ok(());
+          }
         }
 
         // Proceed with deletion

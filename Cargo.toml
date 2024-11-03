@@ -41,9 +41,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # dev only
 anyhow       = "1.0"
-tempfile     = "3.13"
-tokio-test   = "0.4"
-tracing-test = "0.2"
 assert_cmd   = "2.0"
 predicates   = "3.1"
 serial_test  = "3.1"
+tempfile     = "3.13"
+tokio-test   = "0.4"
+tracing-test = "0.2"

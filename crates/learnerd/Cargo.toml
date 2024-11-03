@@ -26,5 +26,5 @@ tracing-subscriber.workspace = true
 anyhow                = { workspace = true }
 assert_cmd.workspace  = true
 predicates.workspace  = true
-tempfile.workspace    = true
 serial_test.workspace = true
+tempfile.workspace    = true
