@@ -1,2 +1,32 @@
 [workspace]
 members = ["crates/learner", "crates/learnerd"]
+
+[workspace.package]
+authors    = ["Colin Roberts"]
+edition    = "2021"
+keywords   = ["learning", "research", "automation", "papers"]
+license    = "Apache-2.0"
+repository = "https://github.com/autoparallel/learner"
+
+[workspace.dependencies]
+chrono         = { version = "0.4", features = ["serde"] }
+clap           = { version = "4.0", features = ["derive"] }
+dirs           = "5.0"
+lazy_static    = "1.5"
+quick-xml      = { version = "0.37", features = ["serialize"] }
+regex          = "1.11"
+reqwest        = { version = "0.12", features = ["json"] }
+rusqlite       = { version = "0.32", features = ["bundled", "functions", "chrono"] }
+serde          = { version = "1.0", features = ["derive"] }
+serde_json     = "1.0"
+thiserror      = "1.0"
+tokio          = { version = "1.41", features = ["full"] }
+tokio-rusqlite = "0.6"
+tracing        = "0.1"
+url            = "2.5"
+
+# Dev dependencies
+anyhow       = "1.0"
+tempfile     = "3.13"
+tokio-test   = "0.4"
+tracing-test = "0.2"

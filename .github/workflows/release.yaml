@@ -22,21 +22,20 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Install cargo-semver-checks
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-semver-checks
-          version: latest
+        uses: taiki-e/install-action@cargo-semver-checks
 
       - name: Run semver checks
-        run: cargo semver-checks check-release
+        run: cargo semver-checks check-release --workspace
 
-      - name: Commit Cargo.lock
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add Cargo.lock
-          git commit -m "Update Cargo.lock" || (git add Cargo.lock && git commit -m "Update Cargo.lock") || echo "No changes to commit"
+      - name: Update Cargo.lock
+        uses: stefanzweifel/git-auto-commit-action@v5  # Better commit action
+        with:
+          commit_message: "chore: update Cargo.lock"
+          file_pattern: "Cargo.lock"
 
       - name: Run release-plz
         uses: MarcoIeni/release-plz-action@v0.5.41
