@@ -8,22 +8,22 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"  
 
 jobs:
   format:
     name: formatting
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
-
+      - uses: actions/checkout@v4
+      
       - name: install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@nightly  
         with:
           components: rustfmt
 
       - name: install taplo
-        run: cargo install taplo-cli
+        run: cargo install taplo-cli 
 
       - name: run Rust fmt
         run: cargo fmt --all -- --check
@@ -34,80 +34,61 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
       - name: run clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets --all-features
 
   test:
     name: test
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --verbose --workspace
 
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --verbose --workspace
 
   udeps:
     name: unused dependencies
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@nightly 
 
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-udeps-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-udeps-
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-udeps
-        run: which cargo-udeps || cargo install cargo-udeps --locked
+        run: cargo install cargo-udeps --locked
 
       - name: Check unused dependencies
-        run: cargo udeps
+        run: cargo udeps --workspace
 
   semver:
     name: semver
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -115,10 +96,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-semver-checks
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-semver-checks
-          version: latest
+        uses: taiki-e/install-action@cargo-semver-checks
 
       - name: Run semver checks
-        run: cargo semver-checks check-release
+        run: cargo semver-checks check-release --workspace
