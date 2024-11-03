@@ -197,7 +197,6 @@ fn extract_doi(url: &Url) -> Result<String, PaperError> {
 
 #[cfg(test)]
 mod tests {
-  use pretty_assertions::assert_eq;
 
   use super::*;
 

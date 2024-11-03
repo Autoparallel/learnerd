@@ -86,14 +86,13 @@ impl Default for ArxivClient {
 
 #[cfg(test)]
 mod tests {
-  use pretty_assertions::assert_eq;
 
   use super::*;
 
   #[tokio::test]
-  async fn test_arxiv_entry_fetch() -> anyhow::Result<()> {
+  async fn test_arxiv_entry_fetch() {
     let client = ArxivClient::new();
-    let paper = client.fetch_paper("2301.07041").await?;
+    let paper = client.fetch_paper("2301.07041").await.unwrap();
 
     println!("Title: {}", paper.title);
     println!("Authors: {:?}", paper.authors);
@@ -102,7 +101,5 @@ mod tests {
     assert!(!paper.authors.is_empty());
     assert_eq!(paper.source, Source::Arxiv);
     assert_eq!(paper.source_identifier, "2301.07041");
-
-    Ok(())
   }
 }
