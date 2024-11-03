@@ -25,7 +25,7 @@ use url::Url;
 
 pub mod clients;
 
-use clients::arxiv::ArxivClient;
+use clients::{arxiv::ArxivClient, doi::DOIClient, iacr::IACRClient};
 use lazy_static::lazy_static;
 use tracing::debug;
 #[cfg(test)] use tracing_test::traced_test;
@@ -81,7 +81,7 @@ impl Paper {
   /// * `input` - Can be:
   ///   - An arXiv URL (e.g., "https://arxiv.org/abs/2301.07041")
   ///   - An arXiv ID (e.g., "2301.07041" or "math.AG/0601001")
-  ///   - An IACR URL (e.g., "https://eprint.iacr.org/2023/123")
+  ///   - An IACR URL (e.g., "https://eprint.iacr.org/2016/260")
   ///   - An IACR ID (e.g., "2023/123")
   ///   - A DOI URL (e.g., "https://doi.org/10.1145/1327452.1327492")
   ///   - A DOI (e.g., "10.1145/1327452.1327492")
@@ -124,14 +124,14 @@ impl Paper {
           let id = extract_arxiv_id(&url)?;
           ArxivClient::new().fetch_paper(&id).await
         },
-        // Some("eprint.iacr.org") => {
-        //     let id = extract_iacr_id(&url)?;
-        //     Self::fetch_iacr(&id).await
-        // }
-        // Some("doi.org") => {
-        //     let doi = extract_doi(&url)?;
-        //     Self::fetch_doi(&doi).await
-        // }
+        Some("eprint.iacr.org") => {
+          let id = extract_iacr_id(&url)?;
+          IACRClient::new().fetch_paper(&id).await
+        },
+        Some("doi.org") => {
+          let doi = extract_doi(&url)?;
+          DOIClient::new().fetch_paper(&doi).await
+        },
         _ => Err(PaperError::InvalidIdentifier),
       };
     }
@@ -142,11 +142,11 @@ impl Paper {
       id if ARXIV_NEW.is_match(id) || ARXIV_OLD.is_match(id) =>
         ArxivClient::new().fetch_paper(id).await,
 
-      // // IACR pattern
-      // i if IACR.is_match(i) => Self::fetch_iacr(i).await,
+      // IACR pattern
+      id if IACR.is_match(id) => IACRClient::new().fetch_paper(id).await,
 
-      // // DOI pattern
-      // i if DOI.is_match(i) => Self::fetch_doi(i).await,
+      // DOI pattern
+      id if DOI.is_match(id) => DOIClient::new().fetch_paper(id).await,
 
       // No pattern matched
       _ => Err(PaperError::InvalidIdentifier),
@@ -218,21 +218,39 @@ mod tests {
     assert_eq!(paper.source_identifier, "2301.07041");
   }
 
-  // #[tokio::test]
-  // async fn test_iacr_paper() -> anyhow::Result<()> {
-  //     let paper = Paper::from_iacr("2023/123").await?;
-  //     assert!(paper.title.len() > 0);
-  //     assert!(!paper.authors.is_empty());
-  //     assert_eq!(paper.source, Source::IACR);
-  //     Ok(())
-  // }
+  #[tokio::test]
+  async fn test_iacr_paper_from_id() -> anyhow::Result<()> {
+    let paper = Paper::new("2016/260").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::IACR);
+    Ok(())
+  }
 
-  // #[tokio::test]
-  // async fn test_doi_paper() -> anyhow::Result<()> {
-  //     let paper = Paper::from_doi("10.1145/1327452.1327492").await?;
-  //     assert!(paper.title.len() > 0);
-  //     assert!(!paper.authors.is_empty());
-  //     assert_eq!(paper.source, Source::DOI);
-  //     Ok(())
-  // }
+  #[tokio::test]
+  async fn test_iacr_paper_from_url() -> anyhow::Result<()> {
+    let paper = Paper::new("https://eprint.iacr.org/2016/260").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::IACR);
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_doi_paper_from_id() -> anyhow::Result<()> {
+    let paper = Paper::new("10.1145/1327452.1327492").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::DOI);
+    Ok(())
+  }
+
+  #[tokio::test]
+  async fn test_doi_paper_from_url() -> anyhow::Result<()> {
+    let paper = Paper::new("https://doi.org/10.1145/1327452.1327492").await?;
+    assert!(!paper.title.is_empty());
+    assert!(!paper.authors.is_empty());
+    assert_eq!(paper.source, Source::DOI);
+    Ok(())
+  }
 }
