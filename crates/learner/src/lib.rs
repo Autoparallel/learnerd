@@ -15,16 +15,13 @@
 //! }
 //! ```
 
-#[warn(missing_docs, clippy::missing_docs_in_private_items)]
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 #[cfg(test)] use tracing_test::traced_test;
-use url::Url;
 
 pub mod clients;
 pub mod database;
