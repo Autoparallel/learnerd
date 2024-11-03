@@ -59,10 +59,10 @@ impl FromStr for Source {
   type Err = LearnerError;
 
   fn from_str(s: &str) -> Result<Self, Self::Err> {
-    match s {
-      "Arxiv" => Ok(Source::Arxiv),
-      "IACR" => Ok(Source::IACR),
-      "DOI" => Ok(Source::DOI),
+    match &s.to_lowercase() as &str {
+      "arxiv" => Ok(Source::Arxiv),
+      "iacr" => Ok(Source::IACR),
+      "doi" => Ok(Source::DOI),
       s => Err(LearnerError::InvalidSource(s.to_owned())),
     }
   }

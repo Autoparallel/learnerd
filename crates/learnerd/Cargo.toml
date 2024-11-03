@@ -17,6 +17,9 @@ tokio.workspace              = true
 tracing.workspace            = true
 tracing-subscriber.workspace = true
 console.workspace            = true
+dialoguer.workspace          = true
+glob.workspace               = true
+thiserror.workspace          = true
 
 
 [dev-dependencies]

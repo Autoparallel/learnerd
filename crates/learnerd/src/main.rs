@@ -2,13 +2,15 @@ use std::path::PathBuf;
 
 use clap::{builder::ArgAction, Parser, Subcommand};
 use console::{style, Emoji};
+use errors::LearnerdErrors;
 use learner::{
   database::Database,
-  errors::LearnerError,
   paper::{Paper, Source},
 };
 use tracing::{debug, trace};
 use tracing_subscriber::EnvFilter;
+
+pub mod errors;
 
 static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🔍 ", "");
 static BOOKS: Emoji<'_, '_> = Emoji("📚 ", "");
@@ -69,6 +71,12 @@ enum Commands {
     /// Search query
     query: String,
   },
+  /// Removes the entire database
+  Clean {
+    /// Path to the database file
+    #[arg(long, short)]
+    path: Option<PathBuf>,
+  },
 }
 
 /// Setup logging with the specified verbosity level
@@ -92,7 +100,7 @@ fn setup_logging(verbosity: u8) {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), LearnerError> {
+async fn main() -> Result<(), LearnerdErrors> {
   let cli = Cli::parse();
   setup_logging(cli.verbose);
 
@@ -108,6 +116,52 @@ async fn main() -> Result<(), LearnerError> {
         default_path
       });
 
+      if path.exists() {
+        println!(
+          "{} Database already exists at: {}",
+          style(WARNING).yellow(),
+          style(path.display()).yellow()
+        );
+
+        // First confirmation with proper prompt
+        let confirm = dialoguer::Confirm::new()
+          .with_prompt(
+            "Do you want to reinitialize this database? This will erase all existing data",
+          )
+          .default(false)
+          .interact()?;
+
+        if !confirm {
+          println!("{} Keeping existing database", style("ℹ").blue());
+          return Ok(());
+        }
+
+        // Require typing INIT for final confirmation
+        let input = dialoguer::Input::<String>::new()
+          .with_prompt(&format!(
+            "{} Type {} to confirm reinitialization",
+            style("⚠️").red(),
+            style("INIT").red().bold()
+          ))
+          .interact_text()?;
+
+        if input != "INIT" {
+          println!("{} Operation cancelled, keeping existing database", style("ℹ").blue());
+          return Ok(());
+        }
+
+        // Remove existing database
+        println!("{} Removing existing database", style(WARNING).yellow());
+        std::fs::remove_file(&path)?;
+
+        // Also remove any FTS auxiliary files
+        let fts_files = glob::glob(&format!("{}*", path.display()))?;
+        for file in fts_files.flatten() {
+          std::fs::remove_file(file)?;
+        }
+      }
+
+      // Create parent directories if they don't exist
       if let Some(parent) = path.parent() {
         trace!("Creating parent directories: {}", parent.display());
         std::fs::create_dir_all(parent)?;
@@ -272,6 +326,64 @@ async fn main() -> Result<(), LearnerError> {
             style("\"exact phrase\"").yellow().italic()
           );
         }
+      }
+      Ok(())
+    },
+
+    Commands::Clean { path } => {
+      let path = path.unwrap_or_else(Database::default_path);
+      if path.exists() {
+        println!(
+          "{} Database found at: {}",
+          style(WARNING).yellow(),
+          style(path.display()).yellow()
+        );
+
+        // First confirmation
+        if !dialoguer::Confirm::new()
+          .with_prompt("Are you sure you want to delete this database?")
+          .default(false)
+          .wait_for_newline(true)
+          .interact()?
+        {
+          println!("{} Operation cancelled", style("✖").red());
+          return Ok(());
+        }
+
+        // Require typing DELETE for final confirmation
+        let input = dialoguer::Input::<String>::new()
+          .with_prompt(&format!(
+            "{} Type {} to confirm deletion",
+            style("⚠️").red(),
+            style("DELETE").red().bold()
+          ))
+          .interact_text()?;
+
+        if input != "DELETE" {
+          println!("{} Operation cancelled", style("✖").red());
+          return Ok(());
+        }
+
+        // Proceed with deletion
+        println!(
+          "{} Removing database: {}",
+          style(WARNING).yellow(),
+          style(path.display()).yellow()
+        );
+        std::fs::remove_file(&path)?;
+
+        // Also remove any FTS auxiliary files
+        let fts_files = glob::glob(&format!("{}*", path.display()))?;
+        for file in fts_files.flatten() {
+          std::fs::remove_file(file)?;
+        }
+        println!("{} Database files cleaned", style(SUCCESS).green());
+      } else {
+        println!(
+          "{} No database found at: {}",
+          style(WARNING).yellow(),
+          style(path.display()).yellow()
+        );
       }
       Ok(())
     },

@@ -327,41 +327,79 @@ impl Database {
   /// # }
   /// ```
   pub async fn search_papers(&self, query: &str) -> Result<Vec<Paper>, LearnerError> {
-    // Clone the query before moving into the async closure
-    let query = query.to_string();
+    let query = query.to_lowercase(); // Make search case-insensitive
 
     self
       .conn
       .call(move |conn| {
-        let mut stmt = conn.prepare_cached(
-          "SELECT p.id, p.title, p.abstract_text, p.publication_date,
-                            p.source, p.source_identifier, p.pdf_url, p.doi
-                     FROM papers p
-                     JOIN papers_fts f ON p.id = f.rowid
-                     WHERE papers_fts MATCH ?1
-                     ORDER BY rank",
+        // First get all paper IDs matching the search
+        let mut id_stmt = conn.prepare_cached(
+          "SELECT p.id
+                 FROM papers p
+                 JOIN papers_fts f ON p.id = f.rowid
+                 WHERE papers_fts MATCH ?1 
+                 ORDER BY rank",
         )?;
 
-        let papers = stmt.query_map([query], |row| {
-          Ok(Paper {
-            title:             row.get(1)?,
-            abstract_text:     row.get(2)?,
-            publication_date:  row.get(3)?,
-            source:            Source::from_str(&row.get::<_, String>(4)?).map_err(|e| {
-              rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(e))
-            })?,
-            source_identifier: row.get(5)?,
-            pdf_url:           row.get(6)?,
-            doi:               row.get(7)?,
-            authors:           Vec::new(), // We'll fill this in below
-          })
-        })?;
+        // Collect matching IDs first
+        let paper_ids: Vec<i64> =
+          id_stmt.query_map([&query], |row| row.get(0))?.collect::<Result<Vec<_>, _>>()?;
 
-        let mut result = Vec::new();
-        for paper in papers {
-          result.push(paper?);
+        let mut papers = Vec::new();
+
+        // Now fetch complete paper data for each ID
+        for paper_id in paper_ids {
+          // Get paper details
+          let mut paper_stmt = conn.prepare_cached(
+            "SELECT title, abstract_text, publication_date,
+                            source, source_identifier, pdf_url, doi
+                     FROM papers 
+                     WHERE id = ?",
+          )?;
+
+          let paper = paper_stmt.query_row([paper_id], |row| {
+            Ok(Paper {
+              title:             row.get(0)?,
+              abstract_text:     row.get(1)?,
+              publication_date:  row.get(2)?,
+              source:            Source::from_str(&row.get::<_, String>(3)?).map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                  3,
+                  rusqlite::types::Type::Text,
+                  Box::new(e),
+                )
+              })?,
+              source_identifier: row.get(4)?,
+              pdf_url:           row.get(5)?,
+              doi:               row.get(6)?,
+              authors:           Vec::new(),
+            })
+          })?;
+
+          // Get authors for this paper
+          let mut author_stmt = conn.prepare_cached(
+            "SELECT name, affiliation, email
+                     FROM authors
+                     WHERE paper_id = ?",
+          )?;
+
+          let authors = author_stmt
+            .query_map([paper_id], |row| {
+              Ok(Author {
+                name:        row.get(0)?,
+                affiliation: row.get(1)?,
+                email:       row.get(2)?,
+              })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+          // Create the complete paper with authors
+          let mut paper = paper;
+          paper.authors = authors;
+          papers.push(paper);
         }
-        Ok(result)
+
+        Ok(papers)
       })
       .await
       .map_err(LearnerError::from)

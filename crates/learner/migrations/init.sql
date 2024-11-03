@@ -1,7 +1,7 @@
 -- Enable foreign keys
 PRAGMA foreign_keys = ON;
 
--- Create papers table
+-- Base tables
 CREATE TABLE IF NOT EXISTS papers (
     id INTEGER PRIMARY KEY,
     title TEXT NOT NULL,
@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS papers (
     UNIQUE(source, source_identifier)
 );
 
--- Create authors table
 CREATE TABLE IF NOT EXISTS authors (
     id INTEGER PRIMARY KEY,
     paper_id INTEGER NOT NULL,
@@ -28,33 +27,21 @@ CREATE TABLE IF NOT EXISTS authors (
     FOREIGN KEY(paper_id) REFERENCES papers(id) ON DELETE CASCADE
 );
 
--- Full-text search
+-- Title-only search index
 CREATE VIRTUAL TABLE IF NOT EXISTS papers_fts USING fts5(
-    title, 
-    abstract_text,
+    title,
     content=papers,
-    content_rowid=id
+    content_rowid=id,
+    tokenize='unicode61 remove_diacritics 1'
 );
 
--- Triggers to keep FTS index updated
+-- Single trigger to maintain FTS index
 CREATE TRIGGER IF NOT EXISTS papers_ai AFTER INSERT ON papers BEGIN
-    INSERT INTO papers_fts(rowid, title, abstract_text)
-    VALUES (new.id, new.title, new.abstract_text);
+    INSERT INTO papers_fts(rowid, title)
+    VALUES (new.id, new.title);
 END;
 
-CREATE TRIGGER IF NOT EXISTS papers_ad AFTER DELETE ON papers BEGIN
-    INSERT INTO papers_fts(papers_fts, rowid, title, abstract_text)
-    VALUES('delete', old.id, old.title, old.abstract_text);
-END;
-
-CREATE TRIGGER IF NOT EXISTS papers_au AFTER UPDATE ON papers BEGIN
-    INSERT INTO papers_fts(papers_fts, rowid, title, abstract_text)
-    VALUES('delete', old.id, old.title, old.abstract_text);
-    INSERT INTO papers_fts(rowid, title, abstract_text)
-    VALUES (new.id, new.title, new.abstract_text);
-END;
-
--- Indexes
+-- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_papers_source_id ON papers(source, source_identifier);
 CREATE INDEX IF NOT EXISTS idx_papers_doi ON papers(doi) WHERE doi IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_authors_paper_id ON authors(paper_id);
