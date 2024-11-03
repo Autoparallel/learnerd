@@ -142,11 +142,11 @@ impl LearnerError {
   /// # Examples
   ///
   /// ```
-  /// use learner::{Database, LearnerError, Paper};
+  /// use learner::errors::LearnerError;
   ///
   /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-  /// let db = Database::open("papers.db").await?;
-  /// let paper = Paper::new("2301.07041").await?;
+  /// let db = learner::database::Database::open("papers.db").await?;
+  /// let paper = learner::paper::Paper::new("2301.07041").await?;
   ///
   /// match paper.save(&db).await {
   ///   Ok(id) => println!("Saved paper with ID: {}", id),
