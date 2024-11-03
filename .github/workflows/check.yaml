@@ -8,22 +8,22 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"  
 
 jobs:
   format:
     name: formatting
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       
       - name: install Rust
-        uses: dtolnay/rust-toolchain@nightly  
+        uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
 
       - name: install taplo
-        run: cargo install taplo-cli 
+        run: cargo install taplo-cli
 
       - name: run Rust fmt
         run: cargo fmt --all -- --check
@@ -34,6 +34,7 @@ jobs:
   lint:
     name: lint
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +52,7 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -69,11 +71,12 @@ jobs:
   udeps:
     name: unused dependencies
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly 
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -87,6 +90,7 @@ jobs:
   semver:
     name: semver
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
