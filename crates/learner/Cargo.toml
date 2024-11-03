@@ -6,7 +6,7 @@ edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
 name                 = "learner"
-readme               = "README.md"
+readme.workspace     = true
 repository.workspace = true
 version              = "0.2.0"
 
