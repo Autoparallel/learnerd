@@ -830,6 +830,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "learner"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2b3f683bced0dc55e1bd6152f918a493a04eb7a236c6233313af58fb19905f4"
+dependencies = [
+ "chrono",
+ "dirs",
+ "lazy_static",
+ "quick-xml",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-rusqlite",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "learnerd"
 version = "0.1.0"
 dependencies = [
@@ -839,7 +861,7 @@ dependencies = [
  "console",
  "dialoguer",
  "glob",
- "learner",
+ "learner 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "predicates",
  "serial_test",
  "tempfile",
