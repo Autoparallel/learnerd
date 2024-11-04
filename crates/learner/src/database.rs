@@ -409,8 +409,6 @@ impl Database {
 #[cfg(test)]
 mod tests {
 
-  use tempfile::tempdir;
-
   use super::*;
 
   /// Helper function to create a test paper
@@ -442,6 +440,7 @@ mod tests {
     (db, dir)
   }
 
+  #[traced_test]
   #[tokio::test]
   async fn test_database_creation() {
     let dir = tempdir().unwrap();
@@ -454,6 +453,7 @@ mod tests {
     assert!(db_path.exists());
   }
 
+  #[traced_test]
   #[tokio::test]
   async fn test_save_and_retrieve_paper() {
     let (db, _dir) = setup_test_db().await;
@@ -489,6 +489,7 @@ mod tests {
     assert_eq!(retrieved.authors[1].email, None);
   }
 
+  #[traced_test]
   #[tokio::test]
   async fn test_get_nonexistent_paper() {
     let (db, _dir) = setup_test_db().await;
@@ -498,6 +499,7 @@ mod tests {
     assert!(result.is_none());
   }
 
+  #[traced_test]
   #[tokio::test]
   async fn test_full_text_search() {
     let (db, _dir) = setup_test_db().await;
@@ -530,6 +532,7 @@ mod tests {
     assert_eq!(results[0].title, paper2.title);
   }
 
+  #[traced_test]
   #[tokio::test]
   async fn test_duplicate_paper_handling() {
     let (db, _dir) = setup_test_db().await;

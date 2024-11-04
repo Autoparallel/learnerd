@@ -21,12 +21,14 @@ use std::{path::PathBuf, str::FromStr};
 
 use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::debug;
-#[cfg(test)] use tracing_test::traced_test;
+use tracing::{debug, trace};
+#[cfg(test)]
+use {tempfile::tempdir, tracing_test::traced_test};
 
 pub mod clients;
 pub mod database;
 pub mod errors;
+pub mod format;
 pub mod paper;
 
 use clients::{ArxivClient, DOIClient, IACRClient};
