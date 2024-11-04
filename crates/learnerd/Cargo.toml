@@ -10,8 +10,8 @@ repository.workspace = true
 version              = "0.1.0"
 
 [dependencies]
-# learner.workspace = true # for development
-learner = "0.2.1" # for release
+learner.workspace = true # for development
+# learner = "0.2.1" # for release
 
 clap.workspace               = true
 console.workspace            = true

@@ -32,7 +32,7 @@
 
 #![warn(missing_docs, clippy::missing_docs_in_private_items)]
 
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use clap::{builder::ArgAction, Parser, Subcommand};
 use console::{style, Emoji};
@@ -96,6 +96,10 @@ enum Commands {
     /// Paper identifier (arXiv ID, DOI, or IACR ID)
     /// Examples: "2301.07041", "10.1145/1327452.1327492"
     identifier: String,
+
+    /// Skip PDF download prompt
+    #[arg(long)]
+    no_pdf: bool,
   },
   /// Remove a paper from the database by its source and identifier
   Remove {
@@ -176,7 +180,7 @@ async fn main() -> Result<(), LearnerdErrors> {
 
   match cli.command {
     Commands::Init => {
-      let path = cli.path.unwrap_or_else(|| {
+      let db_path = cli.path.unwrap_or_else(|| {
         let default_path = Database::default_path();
         println!(
           "{} Using default database path: {}",
@@ -186,11 +190,11 @@ async fn main() -> Result<(), LearnerdErrors> {
         default_path
       });
 
-      if path.exists() {
+      if db_path.exists() {
         println!(
           "{} Database already exists at: {}",
           style(WARNING).yellow(),
-          style(path.display()).yellow()
+          style(db_path.display()).yellow()
         );
 
         // First confirmation with proper prompt
@@ -222,17 +226,17 @@ async fn main() -> Result<(), LearnerdErrors> {
 
         // Remove existing database
         println!("{} Removing existing database", style(WARNING).yellow());
-        std::fs::remove_file(&path)?;
+        std::fs::remove_file(&db_path)?;
 
         // Also remove any FTS auxiliary files
-        let fts_files = glob::glob(&format!("{}*", path.display()))?;
+        let fts_files = glob::glob(&format!("{}*", db_path.display()))?;
         for file in fts_files.flatten() {
           std::fs::remove_file(file)?;
         }
       }
 
       // Create parent directories if they don't exist
-      if let Some(parent) = path.parent() {
+      if let Some(parent) = db_path.parent() {
         trace!("Creating parent directories: {}", parent.display());
         std::fs::create_dir_all(parent)?;
       }
@@ -240,16 +244,39 @@ async fn main() -> Result<(), LearnerdErrors> {
       println!(
         "{} Initializing database at: {}",
         style(ROCKET).cyan(),
-        style(path.display()).yellow()
+        style(db_path.display()).yellow()
       );
 
-      Database::open(&path).await?;
+      let db = Database::open(&db_path).await?;
+
+      // Set up PDF directory
+      let pdf_dir = Database::default_pdf_path();
+      println!(
+        "\n{} PDF files will be stored in: {}",
+        style(PAPER).cyan(),
+        style(pdf_dir.display()).yellow()
+      );
+
+      if dialoguer::Confirm::new()
+        .with_prompt("Use this location for PDF storage?")
+        .default(true)
+        .interact()?
+      {
+        std::fs::create_dir_all(&pdf_dir)?;
+        db.set_config("pdf_dir", &pdf_dir.to_string_lossy()).await?;
+      } else {
+        let pdf_dir: String =
+          dialoguer::Input::new().with_prompt("Enter path for PDF storage").interact_text()?;
+        let pdf_dir = PathBuf::from_str(&pdf_dir).unwrap(); // TODO (autoparallel): fix this unwrap
+        std::fs::create_dir_all(&pdf_dir)?;
+        db.set_config("pdf_dir", &pdf_dir.to_string_lossy()).await?;
+      }
 
       println!("{} Database initialized successfully!", style(SUCCESS).green());
       Ok(())
     },
 
-    Commands::Add { identifier } => {
+    Commands::Add { identifier, no_pdf } => {
       let path = cli.path.unwrap_or_else(|| {
         let default_path = Database::default_path();
         println!(
