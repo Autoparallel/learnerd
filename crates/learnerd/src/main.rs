@@ -285,6 +285,9 @@ async fn main() -> Result<(), LearnerdErrors> {
         style(pdf_dir.display()).yellow()
       );
 
+      // TODO (autoparallel): I think we need this `allow` because though the returns are the same,
+      // the initial `if` bypasses interaction
+      #[allow(clippy::if_same_then_else)]
       let pdf_dir = if cli.accept_defaults {
         pdf_dir // Use default in automated mode
       } else if dialoguer::Confirm::new()
