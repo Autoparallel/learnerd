@@ -29,6 +29,7 @@ fn test_init_and_clean() {
     .arg("init")
     .arg("--path")
     .arg(&db_path)
+    .arg("--accept-defaults")
     .assert()
     .success()
     .stdout(predicate::str::contains("initialized successfully"));
@@ -37,13 +38,13 @@ fn test_init_and_clean() {
 
   // Clean with force flag
   learnerd()
-        .arg("clean")
-        .arg("--path")
-        .arg(&db_path)
-        .arg("--force")  // Add force flag instead of write_stdin
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("Database files cleaned"));
+    .arg("clean")
+    .arg("--path")
+    .arg(&db_path)
+    .arg("--accept-defaults")
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("Database files cleaned"));
 
   assert!(!db_path.exists());
   dir.close().unwrap();
@@ -55,7 +56,7 @@ async fn test_basic_paper_workflow() {
   let (dir, db_path) = temp_db();
 
   // Initialize database
-  learnerd().arg("init").arg("--path").arg(&db_path).assert().success();
+  learnerd().arg("init").arg("--path").arg(&db_path).arg("--accept-defaults").assert().success();
 
   // Add a paper
   learnerd()
@@ -63,6 +64,7 @@ async fn test_basic_paper_workflow() {
     .arg("2301.07041")
     .arg("--path")
     .arg(&db_path)
+    .arg("--accept-defaults")
     .assert()
     .success()
     .stdout(predicate::str::contains("Found paper"))
@@ -74,6 +76,7 @@ async fn test_basic_paper_workflow() {
     .arg("2301.07041")
     .arg("--path")
     .arg(&db_path)
+    .arg("--accept-defaults")
     .assert()
     .success()
     .stdout(predicate::str::contains("already in your database"));
@@ -85,6 +88,7 @@ async fn test_basic_paper_workflow() {
     .arg("2301.07041")
     .arg("--path")
     .arg(&db_path)
+    .arg("--accept-defaults")
     .assert()
     .success()
     .stdout(predicate::str::contains("Paper details"))
@@ -96,6 +100,7 @@ async fn test_basic_paper_workflow() {
     .arg("Homomorphic")
     .arg("--path")
     .arg(&db_path)
+    .arg("--accept-defaults")
     .assert()
     .success()
     .stdout(predicate::str::contains("Found"))
@@ -107,6 +112,7 @@ async fn test_basic_paper_workflow() {
     .arg("ThisPaperDoesNotExist123")
     .arg("--path")
     .arg(&db_path)
+    .arg("--accept-defaults")
     .assert()
     .success()
     .stdout(predicate::str::contains("No papers found"));
