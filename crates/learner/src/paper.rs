@@ -233,7 +233,6 @@ impl Paper {
     let response = reqwest::get(pdf_url).await?;
     trace!("{} pdf_url response: {response:?}", self.source);
     let bytes = response.bytes().await?;
-    dbg!(&bytes);
 
     // TODO (autoparallel): uses a fixed max output filename length, should make this configurable
     // in the future.

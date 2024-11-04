@@ -302,35 +302,62 @@ async fn main() -> Result<(), LearnerdErrors> {
         style(paper.authors.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", ")).white()
       );
 
+      // Save paper first
       match paper.save(&db).await {
         Ok(id) => {
           println!("\n{} Saved paper with ID: {}", style(SAVE).green(), style(id).yellow());
         },
         Err(e) if e.is_duplicate_error() => {
           println!("\n{} This paper is already in your database", style("ℹ").blue());
-
-          // Optionally show existing paper's details
-          if let Some(existing) =
-            db.get_paper_by_source_id(&paper.source, &paper.source_identifier).await?
-          {
-            println!(
-              "   {} {}",
-              style("Source:").blue(),
-              style(format!("{} {}", existing.source, existing.source_identifier)).white()
-            );
-            println!("   {} {}", style("Title:").blue(), style(&existing.title).white());
-            println!(
-              "   {} {}",
-              style("Authors:").blue(),
-              style(
-                existing.authors.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", ")
-              )
-              .white()
-            );
-          }
         },
         Err(e) => return Err(LearnerdErrors::Learner(e)),
+      };
+
+      // Handle PDF download if available
+      if paper.pdf_url.is_some() {
+        if !no_pdf
+          && dialoguer::Confirm::new().with_prompt("Download PDF?").default(true).interact()?
+        {
+          println!("{} Downloading PDF...", style(LOOKING_GLASS).cyan());
+
+          // Get PDF directory from database
+          let pdf_dir = match db.get_config("pdf_dir").await? {
+            Some(dir) => PathBuf::from(dir),
+            None => {
+              println!(
+                "{} PDF directory not configured. Run {} first",
+                style(WARNING).yellow(),
+                style("learnerd init").cyan()
+              );
+              return Ok(());
+            },
+          };
+
+          match paper.download_pdf(pdf_dir).await {
+            Ok(_) => {
+              println!("{} PDF downloaded successfully!", style(SUCCESS).green());
+            },
+            Err(e) => {
+              println!(
+                "{} Failed to download PDF: {}",
+                style(WARNING).yellow(),
+                style(e.to_string()).red()
+              );
+              println!(
+                "   {} You can try downloading it later using: {} {} {} {}",
+                style("Tip:").blue(),
+                style("learnerd download").yellow(),
+                style(&paper.source.to_string()).cyan(),
+                style(&paper.source_identifier).yellow(),
+                style("--force").dim()
+              );
+            },
+          }
+        }
+      } else {
+        println!("\n{} No PDF URL available for this paper", style(WARNING).yellow());
       }
+
       Ok(())
     },
 
