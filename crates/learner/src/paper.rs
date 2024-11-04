@@ -26,7 +26,6 @@
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use reqwest::header;
 use url::Url;
 
 use super::*;
