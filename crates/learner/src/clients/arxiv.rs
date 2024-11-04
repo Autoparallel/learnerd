@@ -144,7 +144,7 @@ impl ArxivClient {
 
     let response = self.client.get(&url).send().await?.text().await?;
 
-    debug!("arXiv response: {response}");
+    trace!("arXiv response: {response}");
 
     let feed: Feed = from_str(&response)
       .map_err(|e| LearnerError::ApiError(format!("Failed to parse XML: {}", e)))?;
@@ -184,6 +184,7 @@ mod tests {
 
   use super::*;
 
+  #[traced_test]
   #[tokio::test]
   async fn test_arxiv_entry_fetch() {
     let client = ArxivClient::new();
