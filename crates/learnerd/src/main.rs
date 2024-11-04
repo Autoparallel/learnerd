@@ -32,13 +32,14 @@
 
 #![warn(missing_docs, clippy::missing_docs_in_private_items)]
 
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
 use clap::{builder::ArgAction, Parser, Subcommand};
 use console::{style, Emoji};
 use errors::LearnerdErrors;
 use learner::{
   database::Database,
+  errors::LearnerError,
   paper::{Paper, Source},
 };
 use tracing::{debug, trace};
@@ -84,6 +85,10 @@ struct Cli {
   /// The subcommand to execute
   #[command(subcommand)]
   command: Commands,
+
+  /// Skip all prompts and accept defaults (mostly for testing)
+  #[arg(long, hide = true, global = true)]
+  accept_defaults: bool,
 }
 
 /// Available commands for the CLI
@@ -91,39 +96,57 @@ struct Cli {
 enum Commands {
   /// Initialize a new learner database
   Init,
+
   /// Add a paper to the database by its identifier
   Add {
     /// Paper identifier (arXiv ID, DOI, or IACR ID)
     /// Examples: "2301.07041", "10.1145/1327452.1327492"
     identifier: String,
+
+    /// Skip PDF download prompt
+    #[arg(long)]
+    no_pdf: bool,
   },
+
+  /// Download the PDF for a given entry, replacing an existing PDF if desired.
+  Download {
+    /// Source system (arxiv, doi, iacr)
+    #[arg(value_enum)]
+    source: Source,
+
+    /// Paper identifier in the source system
+    /// Example: "2301.07041" for arXiv
+    identifier: String,
+  },
+
   /// Remove a paper from the database by its source and identifier
   Remove {
     /// Source system (arxiv, doi, iacr)
     #[arg(value_enum)]
-    source:     Source,
+    source: Source,
+
     /// Paper identifier in the source system
     identifier: String,
   },
+
   /// Retrieve and display a paper's details
   Get {
     /// Source system (arxiv, doi, iacr)
     #[arg(value_enum)]
-    source:     Source,
+    source: Source,
+
     /// Paper identifier in the source system
     identifier: String,
   },
+
   /// Search papers in the database
   Search {
     /// Search query - supports full text search
     query: String,
   },
+
   /// Removes the entire database after confirmation
-  Clean {
-    /// Skip confirmation prompts
-    #[arg(long, short)]
-    force: bool,
-  },
+  Clean,
 }
 
 /// Configures the logging system based on the verbosity level
@@ -176,7 +199,7 @@ async fn main() -> Result<(), LearnerdErrors> {
 
   match cli.command {
     Commands::Init => {
-      let path = cli.path.unwrap_or_else(|| {
+      let db_path = cli.path.unwrap_or_else(|| {
         let default_path = Database::default_path();
         println!(
           "{} Using default database path: {}",
@@ -186,53 +209,62 @@ async fn main() -> Result<(), LearnerdErrors> {
         default_path
       });
 
-      if path.exists() {
+      if db_path.exists() {
         println!(
           "{} Database already exists at: {}",
           style(WARNING).yellow(),
-          style(path.display()).yellow()
+          style(db_path.display()).yellow()
         );
 
-        // First confirmation with proper prompt
-        let confirm = dialoguer::Confirm::new()
-          .with_prompt(
-            "Do you want to reinitialize this database? This will erase all existing data",
-          )
-          .default(false)
-          .interact()?;
+        // Handle reinitialize confirmation
+        let should_reinit = if cli.accept_defaults {
+          false // Default to not reinitializing in automated mode
+        } else {
+          dialoguer::Confirm::new()
+            .with_prompt(
+              "Do you want to reinitialize this database? This will erase all existing data",
+            )
+            .default(false)
+            .interact()?
+        };
 
-        if !confirm {
+        if !should_reinit {
           println!("{} Keeping existing database", style("ℹ").blue());
           return Ok(());
         }
 
-        // Require typing INIT for final confirmation
-        let input = dialoguer::Input::<String>::new()
-          .with_prompt(&format!(
-            "{} Type {} to confirm reinitialization",
-            style("⚠️").red(),
-            style("INIT").red().bold()
-          ))
-          .interact_text()?;
+        // Handle INIT confirmation
+        let should_proceed = if cli.accept_defaults {
+          false // Default to not proceeding in automated mode
+        } else {
+          let input = dialoguer::Input::<String>::new()
+            .with_prompt(&format!(
+              "{} Type {} to confirm reinitialization",
+              style("⚠️").red(),
+              style("INIT").red().bold()
+            ))
+            .interact_text()?;
+          input == "INIT"
+        };
 
-        if input != "INIT" {
+        if !should_proceed {
           println!("{} Operation cancelled, keeping existing database", style("ℹ").blue());
           return Ok(());
         }
 
         // Remove existing database
         println!("{} Removing existing database", style(WARNING).yellow());
-        std::fs::remove_file(&path)?;
+        std::fs::remove_file(&db_path)?;
 
         // Also remove any FTS auxiliary files
-        let fts_files = glob::glob(&format!("{}*", path.display()))?;
+        let fts_files = glob::glob(&format!("{}*", db_path.display()))?;
         for file in fts_files.flatten() {
           std::fs::remove_file(file)?;
         }
       }
 
       // Create parent directories if they don't exist
-      if let Some(parent) = path.parent() {
+      if let Some(parent) = db_path.parent() {
         trace!("Creating parent directories: {}", parent.display());
         std::fs::create_dir_all(parent)?;
       }
@@ -240,16 +272,44 @@ async fn main() -> Result<(), LearnerdErrors> {
       println!(
         "{} Initializing database at: {}",
         style(ROCKET).cyan(),
-        style(path.display()).yellow()
+        style(db_path.display()).yellow()
       );
 
-      Database::open(&path).await?;
+      let db = Database::open(&db_path).await?;
+
+      // Set up PDF directory
+      let pdf_dir = Database::default_pdf_path();
+      println!(
+        "\n{} PDF files will be stored in: {}",
+        style(PAPER).cyan(),
+        style(pdf_dir.display()).yellow()
+      );
+
+      // TODO (autoparallel): I think we need this `allow` because though the returns are the same,
+      // the initial `if` bypasses interaction
+      #[allow(clippy::if_same_then_else)]
+      let pdf_dir = if cli.accept_defaults {
+        pdf_dir // Use default in automated mode
+      } else if dialoguer::Confirm::new()
+        .with_prompt("Use this location for PDF storage?")
+        .default(true)
+        .interact()?
+      {
+        pdf_dir
+      } else {
+        let input: String =
+          dialoguer::Input::new().with_prompt("Enter path for PDF storage").interact_text()?;
+        PathBuf::from_str(&input).unwrap() // TODO (autoparallel): fix this unwrap
+      };
+
+      std::fs::create_dir_all(&pdf_dir)?;
+      db.set_config("pdf_dir", &pdf_dir.to_string_lossy()).await?;
 
       println!("{} Database initialized successfully!", style(SUCCESS).green());
       Ok(())
     },
 
-    Commands::Add { identifier } => {
+    Commands::Add { identifier, no_pdf } => {
       let path = cli.path.unwrap_or_else(|| {
         let default_path = Database::default_path();
         println!(
@@ -278,32 +338,119 @@ async fn main() -> Result<(), LearnerdErrors> {
       match paper.save(&db).await {
         Ok(id) => {
           println!("\n{} Saved paper with ID: {}", style(SAVE).green(), style(id).yellow());
+
+          // Handle PDF download for newly added paper
+          if paper.pdf_url.is_some() && !no_pdf {
+            let should_download = if cli.accept_defaults {
+              true // Default to downloading in automated mode
+            } else {
+              dialoguer::Confirm::new().with_prompt("Download PDF?").default(true).interact()?
+            };
+
+            if should_download {
+              println!("{} Downloading PDF...", style(LOOKING_GLASS).cyan());
+
+              let pdf_dir = match db.get_config("pdf_dir").await? {
+                Some(dir) => PathBuf::from(dir),
+                None => {
+                  println!(
+                    "{} PDF directory not configured. Run {} first",
+                    style(WARNING).yellow(),
+                    style("learnerd init").cyan()
+                  );
+                  return Ok(());
+                },
+              };
+
+              match paper.download_pdf(pdf_dir).await {
+                Ok(_) => {
+                  println!("{} PDF downloaded successfully!", style(SUCCESS).green());
+                },
+                Err(e) => {
+                  println!(
+                    "{} Failed to download PDF: {}",
+                    style(WARNING).yellow(),
+                    style(e.to_string()).red()
+                  );
+                  println!(
+                    "   {} You can try downloading it later using: {} {} {}",
+                    style("Tip:").blue(),
+                    style("learnerd download").yellow(),
+                    style(&paper.source.to_string()).cyan(),
+                    style(&paper.source_identifier).yellow(),
+                  );
+                },
+              }
+            }
+          } else if paper.pdf_url.is_none() {
+            println!("\n{} No PDF URL available for this paper", style(WARNING).yellow());
+          }
         },
         Err(e) if e.is_duplicate_error() => {
           println!("\n{} This paper is already in your database", style("ℹ").blue());
 
-          // Optionally show existing paper's details
-          if let Some(existing) =
-            db.get_paper_by_source_id(&paper.source, &paper.source_identifier).await?
-          {
-            println!(
-              "   {} {}",
-              style("Source:").blue(),
-              style(format!("{} {}", existing.source, existing.source_identifier)).white()
-            );
-            println!("   {} {}", style("Title:").blue(), style(&existing.title).white());
-            println!(
-              "   {} {}",
-              style("Authors:").blue(),
-              style(
-                existing.authors.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", ")
-              )
-              .white()
-            );
+          // Check existing PDF status
+          if paper.pdf_url.is_some() && !no_pdf {
+            if let Ok(Some(dir)) = db.get_config("pdf_dir").await {
+              let pdf_dir = PathBuf::from(dir);
+              let formatted_title = learner::format::format_title(&paper.title, Some(50));
+              let pdf_path = pdf_dir.join(format!("{}.pdf", formatted_title));
+
+              if pdf_path.exists() {
+                println!(
+                  "   {} PDF exists at: {}",
+                  style("📄").cyan(),
+                  style(pdf_path.display()).yellow()
+                );
+
+                let should_redownload = if cli.accept_defaults {
+                  false // Default to not redownloading in automated mode
+                } else {
+                  dialoguer::Confirm::new()
+                    .with_prompt("Download fresh copy? (This will overwrite the existing file)")
+                    .default(false)
+                    .interact()?
+                };
+
+                if should_redownload {
+                  println!("{} Downloading fresh copy of PDF...", style(LOOKING_GLASS).cyan());
+                  match paper.download_pdf(pdf_dir).await {
+                    Ok(_) => println!("{} PDF downloaded successfully!", style(SUCCESS).green()),
+                    Err(e) => println!(
+                      "{} Failed to download PDF: {}",
+                      style(WARNING).yellow(),
+                      style(e.to_string()).red()
+                    ),
+                  }
+                }
+              } else {
+                let should_download = if cli.accept_defaults {
+                  true // Default to downloading in automated mode
+                } else {
+                  dialoguer::Confirm::new()
+                    .with_prompt("PDF not found. Download it now?")
+                    .default(true)
+                    .interact()?
+                };
+
+                if should_download {
+                  println!("{} Downloading PDF...", style(LOOKING_GLASS).cyan());
+                  match paper.download_pdf(pdf_dir).await {
+                    Ok(_) => println!("{} PDF downloaded successfully!", style(SUCCESS).green()),
+                    Err(e) => println!(
+                      "{} Failed to download PDF: {}",
+                      style(WARNING).yellow(),
+                      style(e.to_string()).red()
+                    ),
+                  }
+                }
+              }
+            }
           }
         },
         Err(e) => return Err(LearnerdErrors::Learner(e)),
       }
+
       Ok(())
     },
 
@@ -459,7 +606,7 @@ async fn main() -> Result<(), LearnerdErrors> {
       Ok(())
     },
 
-    Commands::Clean { force } => {
+    Commands::Clean => {
       let path = cli.path.unwrap_or_else(|| {
         let default_path = Database::default_path();
         println!(
@@ -477,7 +624,7 @@ async fn main() -> Result<(), LearnerdErrors> {
         );
 
         // Skip confirmations if force flag is set
-        if !force {
+        if !cli.accept_defaults {
           // First confirmation
           if !dialoguer::Confirm::new()
             .with_prompt("Are you sure you want to delete this database?")
@@ -525,6 +672,133 @@ async fn main() -> Result<(), LearnerdErrors> {
           style(path.display()).yellow()
         );
       }
+      Ok(())
+    },
+
+    Commands::Download { source, identifier } => {
+      let path = cli.path.unwrap_or_else(|| {
+        let default_path = Database::default_path();
+        println!(
+          "{} Using default database path: {}",
+          style(BOOKS).cyan(),
+          style(default_path.display()).yellow()
+        );
+        default_path
+      });
+      let db = Database::open(&path).await?;
+
+      let paper = match db.get_paper_by_source_id(&source, &identifier).await? {
+        Some(p) => p,
+        None => {
+          println!(
+            "{} Paper not found in database. Add it first with: {} {}",
+            style(WARNING).yellow(),
+            style("learnerd add").yellow(),
+            style(&identifier).cyan()
+          );
+          return Ok(());
+        },
+      };
+
+      if paper.pdf_url.is_none() {
+        println!("{} No PDF URL available for this paper", style(WARNING).yellow());
+        return Ok(());
+      };
+
+      let pdf_dir = match db.get_config("pdf_dir").await? {
+        Some(dir) => PathBuf::from(dir),
+        None => {
+          println!(
+            "{} PDF directory not configured. Run {} first",
+            style(WARNING).yellow(),
+            style("learnerd init").cyan()
+          );
+          return Ok(());
+        },
+      };
+
+      if !pdf_dir.exists() {
+        println!(
+          "{} Creating PDF directory: {}",
+          style(LOOKING_GLASS).cyan(),
+          style(&pdf_dir.display()).yellow()
+        );
+        std::fs::create_dir_all(&pdf_dir)?;
+      }
+
+      let formatted_title = learner::format::format_title(&paper.title, Some(50));
+      let pdf_path = pdf_dir.join(format!("{}.pdf", formatted_title));
+
+      let should_download = if pdf_path.exists() && !cli.accept_defaults {
+        println!(
+          "{} PDF already exists at: {}",
+          style("ℹ").blue(),
+          style(&pdf_path.display()).yellow()
+        );
+
+        dialoguer::Confirm::new()
+          .with_prompt("Download fresh copy? (This will overwrite the existing file)")
+          .default(false)
+          .interact()?
+      } else {
+        true
+      };
+
+      if should_download {
+        if pdf_path.exists() {
+          println!("{} Downloading fresh copy...", style(LOOKING_GLASS).cyan());
+        } else {
+          println!("{} Downloading PDF...", style(LOOKING_GLASS).cyan());
+        }
+
+        match paper.download_pdf(pdf_dir.clone()).await {
+          Ok(_) => {
+            println!("{} PDF downloaded successfully!", style(SUCCESS).green());
+            println!("   {} Saved to: {}", style("📄").cyan(), style(&pdf_path.display()).yellow());
+          },
+          Err(e) => {
+            println!(
+              "{} Failed to download PDF: {}",
+              style(WARNING).yellow(),
+              style(e.to_string()).red()
+            );
+
+            match e {
+              LearnerError::ApiError(ref msg) if msg.contains("403") => {
+                println!(
+                  "   {} This PDF might require institutional access",
+                  style("Note:").blue()
+                );
+                println!(
+                  "   {} You may need to download this paper directly from the publisher's website",
+                  style("Tip:").blue()
+                );
+              },
+              LearnerError::Network(_) => {
+                println!(
+                  "   {} Check your internet connection and try again",
+                  style("Tip:").blue()
+                );
+              },
+              LearnerError::Path(_) => {
+                println!(
+                  "   {} Check if you have write permissions for: {}",
+                  style("Tip:").blue(),
+                  style(&pdf_dir.display()).yellow()
+                );
+              },
+              _ => {
+                println!(
+                  "   {} Try using {} to skip prompts",
+                  style("Tip:").blue(),
+                  style("--accept-defaults").yellow()
+                );
+              },
+            }
+          },
+        }
+      }
+
       Ok(())
     },
   }

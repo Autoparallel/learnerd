@@ -27,6 +27,26 @@ CREATE TABLE IF NOT EXISTS authors (
     FOREIGN KEY(paper_id) REFERENCES papers(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS config (
+    key TEXT PRIMARY KEY NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+) STRICT;
+
+CREATE TABLE IF NOT EXISTS files (
+    id INTEGER PRIMARY KEY,
+    paper_id INTEGER NOT NULL,
+    path TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    download_status TEXT NOT NULL,  -- 'success', 'failed', 'pending'
+    error_message TEXT,  -- NULL if successful
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(paper_id) REFERENCES papers(id) ON DELETE CASCADE,
+    UNIQUE(paper_id)  -- One file entry per paper
+) STRICT;
+
 -- Title-only search index
 CREATE VIRTUAL TABLE IF NOT EXISTS papers_fts USING fts5(
     title,
@@ -46,3 +66,4 @@ CREATE INDEX IF NOT EXISTS idx_papers_source_id ON papers(source, source_identif
 CREATE INDEX IF NOT EXISTS idx_papers_doi ON papers(doi) WHERE doi IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_authors_paper_id ON authors(paper_id);
 CREATE INDEX IF NOT EXISTS idx_authors_name ON authors(name);
+CREATE INDEX IF NOT EXISTS idx_files_paper_id ON files(paper_id);

@@ -404,6 +404,169 @@ impl Database {
       .await
       .map_err(LearnerError::from)
   }
+
+  /// Returns the default path for PDF storage.
+  ///
+  /// The path is constructed as follows:
+  /// - On Unix: `~/Documents/learner/papers`
+  /// - On macOS: `~/Documents/learner/papers`
+  /// - On Windows: `Documents\learner\papers`
+  /// - Fallback: `./papers` in the current directory
+  ///
+  /// # Examples
+  ///
+  /// ```no_run
+  /// let path = learner::database::Database::default_pdf_path();
+  /// println!("PDFs will be stored at: {}", path.display());
+  /// ```
+  pub fn default_pdf_path() -> PathBuf {
+    dirs::document_dir().unwrap_or_else(|| PathBuf::from(".")).join("learner").join("papers")
+  }
+
+  /// Sets a configuration value in the database.
+  ///
+  /// # Arguments
+  ///
+  /// * `key` - The configuration key
+  /// * `value` - The value to store
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] indicating success or failure
+  pub async fn set_config(&self, key: &str, value: &str) -> Result<(), LearnerError> {
+    let key = key.to_string();
+    let value = value.to_string();
+    self
+      .conn
+      .call(move |conn| {
+        Ok(
+          conn
+            .execute("INSERT OR REPLACE INTO config (key, value) VALUES (?1, ?2)", params![
+              key, value
+            ])
+            .map(|_| ()),
+        )
+      })
+      .await?
+      .map_err(LearnerError::from)
+  }
+
+  /// Gets a configuration value from the database.
+  ///
+  /// # Arguments
+  ///
+  /// * `key` - The configuration key to retrieve
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing either:
+  /// - Some(String) with the configuration value
+  /// - None if the key doesn't exist
+  pub async fn get_config(&self, key: &str) -> Result<Option<String>, LearnerError> {
+    let key = key.to_string();
+    self
+      .conn
+      .call(move |conn| {
+        let mut stmt = conn.prepare_cached("SELECT value FROM config WHERE key = ?1")?;
+
+        let result = stmt.query_row([key], |row| row.get::<_, String>(0));
+
+        match result {
+          Ok(value) => Ok(Some(value)),
+          Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+          Err(e) => Err(e.into()),
+        }
+      })
+      .await
+      .map_err(LearnerError::from)
+  }
+
+  /// Records a PDF file location and status for a paper.
+  ///
+  /// # Arguments
+  ///
+  /// * `paper_id` - The database ID of the paper
+  /// * `path` - Full path to the file
+  /// * `filename` - The filename
+  /// * `status` - Download status ('success', 'failed', 'pending')
+  /// * `error` - Optional error message if download failed
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing the file ID on success
+  pub async fn record_pdf(
+    &self,
+    paper_id: i64,
+    path: PathBuf,
+    filename: String,
+    status: &str,
+    error: Option<String>,
+  ) -> Result<i64, LearnerError> {
+    let path_str = path.to_string_lossy().to_string();
+    let status = status.to_string();
+
+    self
+      .conn
+      .call(move |conn| {
+        let tx = conn.transaction()?;
+
+        let id = tx.query_row(
+          "INSERT OR REPLACE INTO files (
+                      paper_id, path, filename, download_status, error_message
+                  ) VALUES (?1, ?2, ?3, ?4, ?5)
+                  RETURNING id",
+          params![paper_id, path_str, filename, status, error],
+          |row| row.get(0),
+        )?;
+
+        tx.commit()?;
+        Ok(id)
+      })
+      .await
+      .map_err(LearnerError::from)
+  }
+
+  /// Gets the PDF status for a paper.
+  ///
+  /// # Arguments
+  ///
+  /// * `paper_id` - The database ID of the paper
+  ///
+  /// # Returns
+  ///
+  /// Returns a [`Result`] containing either:
+  /// - Some((PathBuf, String, String, Option<String>)) with the path, filename, status, and error
+  /// - None if no PDF entry exists
+  pub async fn get_pdf_status(
+    &self,
+    paper_id: i64,
+  ) -> Result<Option<(PathBuf, String, String, Option<String>)>, LearnerError> {
+    self
+      .conn
+      .call(move |conn| {
+        let mut stmt = conn.prepare_cached(
+          "SELECT path, filename, download_status, error_message FROM files 
+                   WHERE paper_id = ?1",
+        )?;
+
+        let result = stmt.query_row([paper_id], |row| {
+          Ok((
+            PathBuf::from(row.get::<_, String>(0)?),
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, Option<String>>(3)?,
+          ))
+        });
+
+        match result {
+          Ok(info) => Ok(Some(info)),
+          Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+          Err(e) => Err(e.into()),
+        }
+      })
+      .await
+      .map_err(LearnerError::from)
+  }
 }
 
 #[cfg(test)]
@@ -545,5 +708,155 @@ mod tests {
     // Try to save the same paper again
     let result2 = db.save_paper(&paper).await;
     assert!(result2.is_err()); // Should fail due to UNIQUE constraint
+  }
+  #[traced_test]
+  #[tokio::test]
+  async fn test_default_pdf_path() {
+    let path = Database::default_pdf_path();
+
+    // Should end with learner/papers
+    assert!(path.ends_with("learner/papers") || path.ends_with("learner\\papers"));
+
+    // Should be rooted in a valid directory
+    assert!(path
+      .parent()
+      .unwrap()
+      .starts_with(dirs::document_dir().unwrap_or_else(|| PathBuf::from("."))));
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_config_operations() {
+    let (db, _dir) = setup_test_db().await;
+
+    // Test setting and getting a config value
+    db.set_config("test_key", "test_value").await.unwrap();
+    let value = db.get_config("test_key").await.unwrap();
+    assert_eq!(value, Some("test_value".to_string()));
+
+    // Test getting non-existent config
+    let missing = db.get_config("nonexistent").await.unwrap();
+    assert_eq!(missing, None);
+
+    // Test updating existing config
+    db.set_config("test_key", "new_value").await.unwrap();
+    let updated = db.get_config("test_key").await.unwrap();
+    assert_eq!(updated, Some("new_value".to_string()));
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_pdf_recording() {
+    let (db, _dir) = setup_test_db().await;
+    let paper = create_test_paper();
+
+    // Save paper first to get an ID
+    let paper_id = db.save_paper(&paper).await.unwrap();
+
+    // Test recording successful PDF download
+    let path = PathBuf::from("/test/path/paper.pdf");
+    let filename = "paper.pdf".to_string();
+
+    let file_id =
+      db.record_pdf(paper_id, path.clone(), filename.clone(), "success", None).await.unwrap();
+
+    assert!(file_id > 0);
+
+    // Test retrieving PDF status
+    let status = db.get_pdf_status(paper_id).await.unwrap();
+    assert!(status.is_some());
+
+    let (stored_path, stored_filename, stored_status, error) = status.unwrap();
+    assert_eq!(stored_path, path);
+    assert_eq!(stored_filename, filename);
+    assert_eq!(stored_status, "success");
+    assert_eq!(error, None);
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_pdf_failure_recording() {
+    let (db, _dir) = setup_test_db().await;
+    let paper = create_test_paper();
+
+    // Save paper first to get an ID
+    let paper_id = db.save_paper(&paper).await.unwrap();
+
+    // Test recording failed PDF download
+    let path = PathBuf::from("/test/path/paper.pdf");
+    let filename = "paper.pdf".to_string();
+    let error_msg = "HTTP 403: Access Denied".to_string();
+
+    db.record_pdf(paper_id, path.clone(), filename.clone(), "failed", Some(error_msg.clone()))
+      .await
+      .unwrap();
+
+    // Test retrieving failed status
+    let status = db.get_pdf_status(paper_id).await.unwrap();
+    assert!(status.is_some());
+
+    let (stored_path, stored_filename, stored_status, error) = status.unwrap();
+    assert_eq!(stored_path, path);
+    assert_eq!(stored_filename, filename);
+    assert_eq!(stored_status, "failed");
+    assert_eq!(error, Some(error_msg));
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_pdf_status_nonexistent() {
+    let (db, _dir) = setup_test_db().await;
+    let paper = create_test_paper();
+
+    // Save paper first to get an ID
+    let paper_id = db.save_paper(&paper).await.unwrap();
+
+    // Test getting status for paper with no PDF record
+    let status = db.get_pdf_status(paper_id).await.unwrap();
+    assert_eq!(status, None);
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_pdf_status_update() {
+    let (db, _dir) = setup_test_db().await;
+    let paper = create_test_paper();
+
+    // Save paper first to get an ID
+    let paper_id = db.save_paper(&paper).await.unwrap();
+
+    let path = PathBuf::from("/test/path/paper.pdf");
+    let filename = "paper.pdf".to_string();
+
+    // First record as pending
+    db.record_pdf(paper_id, path.clone(), filename.clone(), "pending", None).await.unwrap();
+
+    // Then update to success
+    db.record_pdf(paper_id, path.clone(), filename.clone(), "success", None).await.unwrap();
+
+    // Verify final status
+    let status = db.get_pdf_status(paper_id).await.unwrap();
+    let (_, _, stored_status, _) = status.unwrap();
+    assert_eq!(stored_status, "success");
+  }
+
+  #[traced_test]
+  #[tokio::test]
+  async fn test_config_persistence() {
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("test.db");
+
+    // Create database and set config
+    {
+      let db = Database::open(&db_path).await.unwrap();
+      db.set_config("pdf_dir", "/test/path").await.unwrap();
+    }
+
+    // Reopen database and verify config persists
+    {
+      let db = Database::open(&db_path).await.unwrap();
+      let value = db.get_config("pdf_dir").await.unwrap();
+      assert_eq!(value, Some("/test/path".to_string()));
+    }
   }
 }
