@@ -3,7 +3,6 @@ allow_dirty         = false
 dependencies_update = true
 semver_check        = true
 
-# Configure the order of releases
 [[package]]
 name    = "learner"
 publish = true
@@ -11,6 +10,3 @@ publish = true
 [[package]]
 name    = "learnerd"
 publish = true
-# This will make release-plz wait for learner to be published
-dependencies_update = [{ name = "learner", version_template = "={{version}}" }]
-publish_delay       = "30s"
