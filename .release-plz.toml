@@ -1,7 +1,7 @@
 [workspace]
 allow_dirty         = false
-semver_check        = true
 dependencies_update = true
+semver_check        = true
 
 # Configure the order of releases
 [[package]]
@@ -12,5 +12,5 @@ publish = true
 name    = "learnerd"
 publish = true
 # This will make release-plz wait for learner to be published
-publish_delay       = "30s"
 dependencies_update = [{ name = "learner", version_template = "={{version}}" }]
+publish_delay       = "30s"
