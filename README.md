@@ -21,13 +21,13 @@
 
 ## Features
 
-- 📚 Academic Paper Management
+- Academic Paper Management
   - Extract metadata from multiple sources (arXiv, IACR, DOI)
   - Support for both URLs and direct identifiers
   - Automatic source detection
   - Full paper metadata including authors, abstracts, and publication dates
 
-- 🔍 Local Database Management
+- Local Database Management
   - SQLite-based storage for offline access
   - Full-text search capabilities
   - Case-insensitive title search
@@ -35,7 +35,7 @@
   - Platform-specific default locations
   - PDF management with configurable storage location
 
-- 🚀 Command Line Interface (`learnerd`)
+- Command Line Interface (`learnerd`)
   - Interactive database management
   - Paper addition and retrieval
   - Search functionality
@@ -138,7 +138,7 @@ The project consists of two main components:
 
 ## Roadmap
 
-### Phase 1: Core Improvements ⏳
+### Phase 1: Core Improvements 
 - [x] PDF management
 - [ ] PDF content extraction
 - [ ] DB/Paper removal functionality
@@ -147,7 +147,7 @@ The project consists of two main components:
 - [ ] Enhanced search features
 - [ ] Custom metadata fields
 
-### Phase 2: Advanced Features 🔮
+### Phase 2: Advanced Features 
 - [ ] LLM-powered paper analysis
 - [ ] PDF daemon for paper versioning and annotations
 - [ ] Automated paper discovery
@@ -161,20 +161,20 @@ Contributions are welcome! Please feel free to submit a Pull Request. Before mak
 ### Continuous Integration
 The project maintains code quality through automated CI workflows:
 
-- 🔍 Code Formatting
+- Code Formatting
   - rustfmt: Enforces consistent Rust code formatting
   - taplo: Ensures TOML files (like Cargo.toml) follow consistent style
 
-- 🔧 Code Quality
+- Code Quality
   - clippy: Rust's official linter for catching common mistakes and enforcing best practices
   - cargo-udeps: Identifies unused dependencies to keep the project lean
 
 
-- ✅ Testing
+- Testing
   - Runs the full test suite across all workspace members
   - [ ] TODO: Check cross-platform 
 
-- 📦 Release Safety
+- Release Safety
   - cargo-semver-checks: Verifies that version bumps follow semantic versioning rules
   - Prevents accidental breaking changes in minor/patch releases
 
