@@ -138,44 +138,62 @@ learnerd daemon stop
 learnerd daemon restart
 ```
 
-#### System Service Installation
+### System Service Installation
 
-For Linux (systemd):
+#### Linux (systemd)
 ```bash
 # Install the service
 sudo learnerd daemon install
 
 # Enable and start the service
-sudo systemctl enable --now learnerd
+sudo systemctl daemon-reload
+sudo systemctl enable learnerd
+sudo systemctl start learnerd
 
-# Check service status
+# Verify it's running
 sudo systemctl status learnerd
 
-# Stop the service
-sudo systemctl stop learnerd
+# View logs
+sudo journalctl -u learnerd
+
+# Service management
+sudo systemctl stop learnerd     # Stop the service
+sudo systemctl start learnerd    # Start the service
+sudo systemctl restart learnerd  # Restart the service
 
 # Remove the service
+sudo systemctl stop learnerd
 sudo learnerd daemon uninstall
 sudo systemctl daemon-reload
 ```
 
-For macOS (launchd):
+#### macOS (launchd)
 ```bash
-# Install the service
+# Install service files
 sudo learnerd daemon install
 
 # Load and start the service
-sudo launchctl load /Library/LaunchDaemons/com.autoparallel.learnerd.plist
+sudo launchctl load /Library/LaunchDaemons/learnerd.daemon.plist
 
-# Check service status
+# Verify it's running
 sudo launchctl list | grep learnerd
 
-# Unload the service
-sudo launchctl unload /Library/LaunchDaemons/com.autoparallel.learnerd.plist
+# Service management
+sudo launchctl bootout system/learnerd.daemon        # Stop
+sudo launchctl bootstrap system /Library/LaunchDaemons/learnerd.daemon.plist  # Start
+sudo launchctl kickstart -k system/learnerd.daemon   # Restart
 
-# Remove the service
-sudo learnerd daemon uninstall
+# Remove the service completely
+sudo pkill learnerd && sudo launchctl bootout system/learnerd.daemon # stop and remove from bootlist
+sudo learnerd daemon uninstall # remove service file all together
 ```
+
+Important Notes:
+- The service is not automatically started after installation
+- You must explicitly `load` the service to activate it
+- Once loaded, it will start automatically on system boot
+- If you `bootout` the service, you must `load` again to reactivate it
+- The `kickstart` command only works if the service is currently loaded
 
 #### Log Files
 

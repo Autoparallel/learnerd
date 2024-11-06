@@ -48,7 +48,7 @@ use tracing_subscriber::EnvFilter;
 pub mod daemon;
 pub mod errors;
 
-use daemon::DaemonCommands;
+use daemon::*;
 
 // Emoji constants for prettier output
 /// Search operation indicator
@@ -854,20 +854,70 @@ async fn main() -> Result<(), LearnerdErrors> {
             Ok(_) => {
               println!("{} Daemon service installed", style(SUCCESS).green());
 
-              #[cfg(target_os = "linux")]
-              println!(
-                "\n{} Run {} to start and enable the service",
-                style("Next step:").blue(),
-                style("sudo systemctl enable --now learnerd").yellow()
-              );
-
               #[cfg(target_os = "macos")]
-              println!(
-                "\n{} Run {} to load the service",
-                style("Next step:").blue(),
-                style("sudo launchctl load /Library/LaunchDaemons/com.autoparallel.learnerd.plist")
+              {
+                println!("{} Daemon service files installed", style(SUCCESS).green());
+
+                println!("\n{} To activate the service:", style("Next steps").blue());
+                println!(
+                  "   1. Load:     {}",
+                  style(format!("sudo launchctl load /Library/LaunchDaemons/{}", SERVICE_FILE))
+                    .yellow()
+                );
+                println!(
+                  "   2. Verify:   {}",
+                  style("sudo launchctl list | grep learnerd").yellow()
+                );
+
+                println!(
+                  "\n{} Once activated, available commands:",
+                  style("Service management").blue()
+                );
+                println!(
+                  "   Stop:     {}",
+                  style(format!("sudo launchctl bootout system/{}", SERVICE_NAME)).yellow()
+                );
+                println!(
+                  "   Start:    {}",
+                  style(format!(
+                    "sudo launchctl bootstrap system /Library/LaunchDaemons/{}",
+                    SERVICE_FILE
+                  ))
                   .yellow()
-              );
+                );
+                println!(
+                  "   Restart:  {}",
+                  style(format!("sudo launchctl kickstart -k system/{}", SERVICE_NAME)).yellow()
+                );
+              }
+
+              #[cfg(target_os = "linux")]
+              {
+                println!("{} Daemon service installed", style(SUCCESS).green());
+
+                println!("\n{} To activate the service:", style("Next steps").blue());
+                println!("   1. Reload:   {}", style("sudo systemctl daemon-reload").yellow());
+                println!("   2. Enable:   {}", style("sudo systemctl enable learnerd").yellow());
+                println!("   3. Start:    {}", style("sudo systemctl start learnerd").yellow());
+                println!("   4. Verify:   {}", style("sudo systemctl status learnerd").yellow());
+
+                println!(
+                  "\n{} Once activated, available commands:",
+                  style("Service management").blue()
+                );
+                println!(
+                  "   Stop:     {}",
+                  style(format!(
+                    "sudo pkill learnerd && sudo launchctl bootout system/{}",
+                    SERVICE_NAME
+                  ))
+                  .yellow()
+                );
+                println!("   Start:    {}", style("sudo systemctl start learnerd").yellow());
+                println!("   Restart:  {}", style("sudo systemctl restart learnerd").yellow());
+                println!("   Status:   {}", style("sudo systemctl status learnerd").yellow());
+                println!("   Logs:     {}", style("sudo journalctl -u learnerd").yellow());
+              }
             },
             Err(e) => {
               println!("{} Failed to install daemon: {}", style(WARNING).yellow(), style(&e).red());

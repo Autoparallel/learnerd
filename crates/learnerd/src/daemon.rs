@@ -24,6 +24,12 @@ use tracing_appender::rolling;
 use super::*;
 use crate::errors::LearnerdErrors;
 
+// Constants for service naming
+pub const SERVICE_NAME: &str = "learnerd.daemon";
+pub const SERVICE_FILE: &str = "learnerd.daemon.plist";
+
+// TODO (autoparallel): group this up better
+#[cfg(target_os = "linux")]
 /// Default paths for daemon-related files
 const DEFAULT_PID_FILE: &str = "/var/run/learnerd.pid";
 const DEFAULT_WORKING_DIR: &str = "/var/lib/learnerd";
@@ -214,20 +220,37 @@ impl Daemon {
       r#"[Unit]
 Description=Academic Paper Management Daemon
 After=network.target
+Documentation=https://github.com/autoparallel/learner
 
 [Service]
 Type=forking
+User=root
+Group=root
 PIDFile={}
 ExecStart={} daemon start
 ExecStop={} daemon stop
 Restart=on-failure
+RestartSec=60
+
+# Security settings
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=yes
+PrivateDevices=yes
+
+# Logging
+StandardOutput=append:{}
+StandardError=append:{}
 
 [Install]
 WantedBy=multi-user.target
 "#,
       self.config.pid_file.display(),
       std::env::current_exe()?.display(),
-      std::env::current_exe()?.display()
+      std::env::current_exe()?.display(),
+      self.config.log_dir.join("stdout.log").display(),
+      self.config.log_dir.join("stderr.log").display(),
     );
 
     fs::write("/etc/systemd/system/learnerd.service", service)?;
@@ -241,30 +264,46 @@ WantedBy=multi-user.target
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key>
-    <string>com.autoparallel.learnerd</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>{}</string>
-        <string>daemon</string>
-        <string>start</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>{}/stdout.log</string>
-    <key>StandardErrorPath</key>
-    <string>{}/stderr.log</string>
+  <key>Label</key>
+  <string>{}</string>
+  <key>ProgramArguments</key>
+  <array>
+      <string>{}</string>
+      <string>daemon</string>
+      <string>start</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+      <key>Crashed</key>
+      <true/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>60</integer>
+  <key>WorkingDirectory</key>
+  <string>{}</string>
+  <key>StandardOutPath</key>
+  <string>{}/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>{}/stderr.log</string>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>HardStopExec</key>
+  <string>{} daemon stop</string>
 </dict>
 </plist>"#,
+      SERVICE_NAME,
       std::env::current_exe()?.display(),
+      self.config.working_dir.display(),
       self.config.log_dir.display(),
-      self.config.log_dir.display()
+      self.config.log_dir.display(),
+      std::env::current_exe()?.display(),
     );
 
-    fs::write("/Library/LaunchDaemons/com.autoparallel.learnerd.plist", plist)?;
+    fs::write(format!("/Library/LaunchDaemons/{}", SERVICE_FILE), plist)?;
     Ok(())
   }
 
