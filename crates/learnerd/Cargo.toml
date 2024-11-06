@@ -12,14 +12,17 @@ version              = "0.1.1"
 [dependencies]
 clap.workspace               = true
 console.workspace            = true
+daemonize.workspace          = true
 dialoguer.workspace          = true
 glob.workspace               = true
 learner.workspace            = true
+serde.workspace              = true
 thiserror.workspace          = true
 tokio.workspace              = true
 tracing.workspace            = true
+tracing-appender.workspace   = true
 tracing-subscriber.workspace = true
-
+nix.workspace                = true
 
 [dev-dependencies]
 anyhow                = { workspace = true }

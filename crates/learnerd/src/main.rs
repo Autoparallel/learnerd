@@ -45,6 +45,7 @@ use learner::{
 use tracing::{debug, trace};
 use tracing_subscriber::EnvFilter;
 
+pub mod daemon;
 pub mod errors;
 
 // Emoji constants for prettier output
