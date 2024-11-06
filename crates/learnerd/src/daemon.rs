@@ -9,7 +9,7 @@
 
 use std::{
   fs::{self, File},
-  path::{Path, PathBuf},
+  path::PathBuf,
 };
 
 use daemonize::Daemonize;
@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 use tracing_appender::rolling;
 
+use super::*;
 use crate::errors::LearnerdErrors;
 
 /// Default paths for daemon-related files
@@ -28,15 +29,32 @@ const DEFAULT_PID_FILE: &str = "/var/run/learnerd.pid";
 const DEFAULT_WORKING_DIR: &str = "/var/lib/learnerd";
 const DEFAULT_LOG_DIR: &str = "/var/log/learnerd";
 
+/// Subcommands for daemon management
+#[derive(Subcommand)]
+pub enum DaemonCommands {
+  /// Start the daemon
+  Start,
+  /// Stop the daemon
+  Stop,
+  /// Restart the daemon
+  Restart,
+  /// Install daemon as system service
+  Install,
+  /// Remove daemon from system services
+  Uninstall,
+  /// Show daemon status
+  Status,
+}
+
 /// Configuration for the daemon service
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DaemonConfig {
   /// Path to store the PID file
-  pid_file:    PathBuf,
+  pub pid_file:    PathBuf,
   /// Working directory for the daemon
-  working_dir: PathBuf,
+  pub working_dir: PathBuf,
   /// Directory for log files
-  log_dir:     PathBuf,
+  pub log_dir:     PathBuf,
 }
 
 impl Default for DaemonConfig {
@@ -63,7 +81,7 @@ impl Default for DaemonConfig {
 
 /// Manages the daemon process and its lifecycle
 pub struct Daemon {
-  config: DaemonConfig,
+  pub config: DaemonConfig,
 }
 
 impl Daemon {

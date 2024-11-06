@@ -118,6 +118,110 @@ learnerd -v add 2301.07041
 learnerd clean
 ```
 
+### Daemon Management
+
+The `learnerd` daemon can run in the background to handle tasks like paper monitoring and updates. It can be run directly or installed as a system service.
+
+#### Basic Usage
+
+```bash
+# Start the daemon
+learnerd daemon start
+
+# Check daemon status
+learnerd daemon status
+
+# Stop the daemon
+learnerd daemon stop
+
+# Restart the daemon
+learnerd daemon restart
+```
+
+#### System Service Installation
+
+For Linux (systemd):
+```bash
+# Install the service
+sudo learnerd daemon install
+
+# Enable and start the service
+sudo systemctl enable --now learnerd
+
+# Check service status
+sudo systemctl status learnerd
+
+# Stop the service
+sudo systemctl stop learnerd
+
+# Remove the service
+sudo learnerd daemon uninstall
+sudo systemctl daemon-reload
+```
+
+For macOS (launchd):
+```bash
+# Install the service
+sudo learnerd daemon install
+
+# Load and start the service
+sudo launchctl load /Library/LaunchDaemons/com.autoparallel.learnerd.plist
+
+# Check service status
+sudo launchctl list | grep learnerd
+
+# Unload the service
+sudo launchctl unload /Library/LaunchDaemons/com.autoparallel.learnerd.plist
+
+# Remove the service
+sudo learnerd daemon uninstall
+```
+
+#### Log Files
+
+The daemon writes logs to the following locations:
+
+- Linux: `/var/log/learnerd/`
+- macOS: `/Library/Logs/learnerd/`
+
+Log files include:
+- `learnerd.log` - Main application log with rotation
+- `stdout.log` - Standard output
+- `stderr.log` - Standard error
+
+View the logs:
+```bash
+# View main log
+tail -f /var/log/learnerd/learnerd.log   # Linux
+tail -f /Library/Logs/learnerd/learnerd.log   # macOS
+
+# View last 100 lines with timestamps
+tail -n 100 /var/log/learnerd/learnerd.log
+```
+
+#### Common Issues
+
+1. **Permission Denied**
+   ```bash
+   # Ensure correct permissions on log directory
+   sudo chown -R root:root /var/log/learnerd   # Linux
+   sudo chown -R root:wheel /Library/Logs/learnerd   # macOS
+   ```
+
+2. **Service Won't Start**
+   ```bash
+   # Check system logs
+   sudo journalctl -u learnerd.service   # Linux
+   sudo log show --predicate 'processImagePath contains "learnerd"'   # macOS
+   ```
+
+3. **PID File Issues**
+   ```bash
+   # If daemon won't start due to stale PID file
+   sudo rm /var/run/learnerd.pid   # Linux
+   sudo rm "/Library/Application Support/learnerd/learnerd.pid"   # macOS
+   ```
+
 ## Project Structure
 
 The project consists of two main components:
