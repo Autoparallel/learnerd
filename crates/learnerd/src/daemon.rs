@@ -102,7 +102,7 @@ impl Daemon {
 
     // Configure file logging
     let file_appender = rolling::RollingFileAppender::builder()
-      .rotation(rolling::Rotation::DAILY)
+      .rotation(rolling::Rotation::NEVER) // TODO (autoparallel): This should be rotated, but I changed this so that the files are named more easily for now.
       .filename_prefix("learnerd")
       .filename_suffix("log")
       .build(&self.config.log_dir)?;
@@ -115,6 +115,7 @@ impl Daemon {
       .with_target(true)
       .with_file(true)
       .with_line_number(true)
+      .with_env_filter(EnvFilter::new("debug")) // TODO (autoparallel): Make this configurable?
       .init();
 
     info!("Starting learnerd daemon");
@@ -209,7 +210,7 @@ impl Daemon {
 
     // TODO: Implement actual daemon functionality
     loop {
-      std::thread::sleep(std::time::Duration::from_secs(60));
+      std::thread::sleep(std::time::Duration::from_secs(5));
       debug!("Daemon heartbeat");
     }
   }
