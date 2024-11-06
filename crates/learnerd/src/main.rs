@@ -204,7 +204,10 @@ fn setup_logging(verbosity: u8) {
 #[tokio::main]
 async fn main() -> Result<(), LearnerdErrors> {
   let cli = Cli::parse();
-  setup_logging(cli.verbose);
+  if let Commands::Daemon { .. } = cli.command {
+  } else {
+    setup_logging(cli.verbose);
+  }
 
   match cli.command {
     Commands::Init => {
