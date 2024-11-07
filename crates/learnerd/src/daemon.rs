@@ -227,11 +227,24 @@ Documentation=https://github.com/autoparallel/learner
 Type=forking
 User=root
 Group=root
+RuntimeDirectory=learnerd
+RuntimeDirectoryMode=0755
 PIDFile={}
-ExecStart={} daemon start
-ExecStop={} daemon stop
+WorkingDirectory={}
+ExecStart={}
+ExecStop={}
 Restart=on-failure
 RestartSec=60
+
+# Logging
+StandardOutput=append:{}
+StandardError=append:{}
+
+# Make sure directories exist
+ExecStartPre=/bin/mkdir -p {}
+ExecStartPre=/bin/mkdir -p {}
+ExecStartPre=/bin/chown -R root:root {}
+ExecStartPre=/bin/chown -R root:root {}
 
 # Security settings
 NoNewPrivileges=yes
@@ -240,18 +253,19 @@ ProtectHome=read-only
 PrivateTmp=yes
 PrivateDevices=yes
 
-# Logging
-StandardOutput=append:{}
-StandardError=append:{}
-
 [Install]
 WantedBy=multi-user.target
 "#,
       self.config.pid_file.display(),
+      self.config.working_dir.display(),
       std::env::current_exe()?.display(),
       std::env::current_exe()?.display(),
       self.config.log_dir.join("stdout.log").display(),
       self.config.log_dir.join("stderr.log").display(),
+      self.config.working_dir.display(),
+      self.config.log_dir.display(),
+      self.config.working_dir.display(),
+      self.config.log_dir.display()
     );
 
     fs::write("/etc/systemd/system/learnerd.service", service)?;

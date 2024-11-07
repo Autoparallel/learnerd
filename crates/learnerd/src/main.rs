@@ -893,6 +893,11 @@ async fn main() -> Result<(), LearnerdErrors> {
 
               #[cfg(target_os = "linux")]
               {
+                if cfg!(target_os = "nixos") {
+                  println!("⚠️  On NixOS, please install the service through configuration.nix");
+                  // Maybe provide instructions or a link to documentation
+                  return Ok(());
+                }
                 println!("{} Daemon service installed", style(SUCCESS).green());
 
                 println!("\n{} To activate the service:", style("Next steps").blue());
@@ -901,22 +906,22 @@ async fn main() -> Result<(), LearnerdErrors> {
                 println!("   3. Start:    {}", style("sudo systemctl start learnerd").yellow());
                 println!("   4. Verify:   {}", style("sudo systemctl status learnerd").yellow());
 
+                println!("\n{} Troubleshooting commands:", style("Debug").blue());
+                println!("   View logs:     {}", style("sudo journalctl -u learnerd -f").yellow());
                 println!(
-                  "\n{} Once activated, available commands:",
-                  style("Service management").blue()
+                  "   Check paths:   {}",
+                  style("sudo systemctl show learnerd -p ExecStart,PIDFile,RuntimeDirectory")
+                    .yellow()
                 );
                 println!(
-                  "   Stop:     {}",
-                  style(format!(
-                    "sudo pkill learnerd && sudo launchctl bootout system/{}",
-                    SERVICE_NAME
-                  ))
-                  .yellow()
+                  "   Check status:  {}",
+                  style("sudo systemctl status learnerd --no-pager -l").yellow()
                 );
-                println!("   Start:    {}", style("sudo systemctl start learnerd").yellow());
-                println!("   Restart:  {}", style("sudo systemctl restart learnerd").yellow());
-                println!("   Status:   {}", style("sudo systemctl status learnerd").yellow());
-                println!("   Logs:     {}", style("sudo journalctl -u learnerd").yellow());
+
+                println!("\n{} Service paths:", style("Configuration").blue());
+                println!("   Working dir: {}", style(self.config.working_dir.display()).yellow());
+                println!("   PID file:    {}", style(self.config.pid_file.display()).yellow());
+                println!("   Log dir:     {}", style(self.config.log_dir.display()).yellow());
               }
             },
             Err(e) => {
