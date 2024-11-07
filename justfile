@@ -10,7 +10,6 @@ install-deps:
     #!/usr/bin/env bash
     if [[ "$OSTYPE" == "darwin"* ]]; then
         brew install openssl@3
-        # The correct package name for cross-compilation on macOS
         brew install filosottile/musl-cross/musl-cross
     elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
         if command -v apt-get &> /dev/null; then
@@ -42,19 +41,44 @@ install-targets:
 setup: install-deps install-targets setup-env
     @echo "Development environment setup complete!"
 
-# Build for current platform
+# Quick local build (native target only)
 build:
-    cargo build
+    cargo build --workspace
 
-# Build for x86_64 Linux (using musl for better compatibility)
+# Build for macOS ARM64
+build-mac:
+    cargo build --workspace --target aarch64-apple-darwin
+    
+# Build for Linux x86_64
 build-linux:
-    cargo build --target x86_64-unknown-linux-musl
+    cargo build --workspace --target x86_64-unknown-linux-musl
 
-# Run tests
+# Build all targets
+build-all:
+    #!/usr/bin/env bash
+    echo "Building for native target..."
+    cargo build --workspace
+    
+    # Get native target
+    NATIVE_TARGET=$(rustc -vV | grep 'host: ' | cut -d' ' -f2)
+    
+    # Build for macOS ARM64 if not native
+    if [[ "$NATIVE_TARGET" != "aarch64-apple-darwin" ]]; then
+        echo "Building for macOS ARM64..."
+        cargo build --workspace --target aarch64-apple-darwin
+    fi
+    
+    # Build for Linux x86_64 if not native
+    if [[ "$NATIVE_TARGET" != "x86_64-unknown-linux-musl" && "$NATIVE_TARGET" != "x86_64-unknown-linux-gnu" ]]; then
+        echo "Building for Linux x86_64..."
+        cargo build --workspace --target x86_64-unknown-linux-musl
+    fi
+
+# Test all configured targets
 test:
     cargo test --workspace --all-targets
 
-# Run clippy
+# Lint all configured targets
 lint:
     cargo clippy --workspace --all-targets --all-features
 
@@ -66,6 +90,10 @@ fmt:
 # Clean build artifacts
 clean:
     cargo clean
+
+# Run all CI checks
+ci: fmt lint test build-all
+    @echo "All CI checks passed!"
 
 # Show environment info
 info:
