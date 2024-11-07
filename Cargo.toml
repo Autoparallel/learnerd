@@ -22,15 +22,18 @@ tokio     = { version = "1.41", features = ["full"] }
 tracing   = "0.1"
 
 # learner only
-chrono         = { version = "0.4", features = ["serde"] }
-lazy_static    = "1.5"
-quick-xml      = { version = "0.37", features = ["serialize"] }
-regex          = "1.11"
-reqwest        = { version = "0.12", features = ["json"] }
-rusqlite       = { version = "0.32", features = ["bundled", "functions", "chrono"] }
-serde_json     = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+lazy_static = "1.5"
+quick-xml = { version = "0.37", features = ["serialize"] }
+regex = "1.11"
+reqwest = { version = "0.12", features = [
+  "json",
+  "rustls-tls",
+], default-features = false }
+rusqlite = { version = "0.32", features = ["bundled", "functions", "chrono"] }
+serde_json = "1.0"
 tokio-rusqlite = "0.6"
-url            = "2.5"
+url = "2.5"
 
 # learnerd only
 clap               = { version = "4.0", features = ["derive"] }

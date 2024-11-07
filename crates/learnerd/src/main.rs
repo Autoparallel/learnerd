@@ -919,9 +919,9 @@ async fn main() -> Result<(), LearnerdErrors> {
                 );
 
                 println!("\n{} Service paths:", style("Configuration").blue());
-                println!("   Working dir: {}", style(self.config.working_dir.display()).yellow());
-                println!("   PID file:    {}", style(self.config.pid_file.display()).yellow());
-                println!("   Log dir:     {}", style(self.config.log_dir.display()).yellow());
+                println!("   Working dir: {}", style(daemon.config.working_dir.display()).yellow());
+                println!("   PID file:    {}", style(daemon.config.pid_file.display()).yellow());
+                println!("   Log dir:     {}", style(daemon.config.log_dir.display()).yellow());
               }
             },
             Err(e) => {
