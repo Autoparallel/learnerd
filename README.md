@@ -302,17 +302,63 @@ The project maintains code quality through automated CI workflows:
 
 All CI checks must pass before merging pull requests, maintaining consistent quality across contributions.
 
-### Development Setup
+## Development
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   cargo build
-   ```
-3. Run tests:
-   ```bash
-   cargo test --workspace
-   ```
+This project uses [just](https://github.com/casey/just) as a command runner. Install it with:
+
+```bash
+cargo install just
+```
+
+### Common Commands
+
+```bash
+# Setup development environment (install dependencies and targets)
+just setup
+
+# Build all targets
+just build-all
+
+# Run tests
+just test
+
+# Format code
+just fmt
+
+# Run linter
+just lint
+
+# Run all CI checks locally
+just ci
+
+# Show available commands
+just
+```
+
+### Building for Specific Targets
+
+```bash
+# Build for x86_64 Linux
+just build-x86-linux
+
+# Build for ARM64 macOS
+just build-arm-mac
+```
+
+### System Requirements
+
+The setup command will attempt to install required system dependencies, but if you need to install them manually:
+
+#### Linux (Debian/Ubuntu)
+```bash
+sudo apt-get install pkg-config libssl-dev
+```
+
+#### macOS
+```bash
+brew install openssl@3
+export OPENSSL_DIR=$(brew --prefix openssl@3)  # Add to your shell profile
+```
 
 ## License
 
