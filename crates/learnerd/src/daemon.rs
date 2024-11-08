@@ -230,13 +230,11 @@ Group=root
 ExecStart=/usr/local/bin/learnerd daemon start
 Restart=on-failure
 RestartSec=60
-
-# Keep the service running
 RemainAfterExit=yes
 
-# Let systemd handle logging directly
-StandardOutput=journal
-StandardError=journal
+# Logging configuration
+StandardOutput=append:/var/log/learnerd/stdout.log
+StandardError=append:/var/log/learnerd/stderr.log
 
 [Install]
 WantedBy=multi-user.target
