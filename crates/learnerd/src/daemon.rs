@@ -229,22 +229,27 @@ User=root
 Group=root
 RuntimeDirectory=learnerd
 RuntimeDirectoryMode=0755
-PIDFile={}
-WorkingDirectory={}
-ExecStart={}
-ExecStop={}
+PIDFile=/var/run/learnerd.pid
+WorkingDirectory=/var/lib/learnerd
+ExecStart=/usr/local/bin/learnerd daemon start
+ExecStop=/usr/local/bin/learnerd daemon stop
 Restart=on-failure
 RestartSec=60
 
 # Logging
-StandardOutput=append:{}
-StandardError=append:{}
+StandardOutput=append:/var/log/learnerd/stdout.log
+StandardError=append:/var/log/learnerd/stderr.log
 
 # Make sure directories exist
-ExecStartPre=/bin/mkdir -p {}
-ExecStartPre=/bin/mkdir -p {}
-ExecStartPre=/bin/chown -R root:root {}
-ExecStartPre=/bin/chown -R root:root {}
+ExecStartPre=/bin/mkdir -p /var/lib/learnerd
+ExecStartPre=/bin/mkdir -p /var/log/learnerd
+ExecStartPre=/bin/mkdir -p /var/run/learnerd
+ExecStartPre=/bin/chown -R root:root /var/lib/learnerd
+ExecStartPre=/bin/chown -R root:root /var/log/learnerd
+ExecStartPre=/bin/chown -R root:root /var/run/learnerd
+ExecStartPre=/bin/chmod 755 /var/lib/learnerd
+ExecStartPre=/bin/chmod 755 /var/log/learnerd
+ExecStartPre=/bin/chmod 755 /var/run/learnerd
 
 # Security settings
 NoNewPrivileges=yes
@@ -255,20 +260,38 @@ PrivateDevices=yes
 
 [Install]
 WantedBy=multi-user.target
-"#,
-      self.config.pid_file.display(),
-      self.config.working_dir.display(),
-      std::env::current_exe()?.display(),
-      std::env::current_exe()?.display(),
-      self.config.log_dir.join("stdout.log").display(),
-      self.config.log_dir.join("stderr.log").display(),
-      self.config.working_dir.display(),
-      self.config.log_dir.display(),
-      self.config.working_dir.display(),
-      self.config.log_dir.display()
+"#
     );
 
+    // Create required directories
+    fs::create_dir_all("/var/lib/learnerd")?;
+    fs::create_dir_all("/var/log/learnerd")?;
+    fs::create_dir_all("/var/run/learnerd")?;
+
+    // Set permissions
+    for dir in ["/var/lib/learnerd", "/var/log/learnerd", "/var/run/learnerd"] {
+      std::process::Command::new("chown").args(["-R", "root:root", dir]).output()?;
+      std::process::Command::new("chmod").args(["755", dir]).output()?;
+    }
+
+    // Install the binary to /usr/local/bin if it's not there
+    if let Ok(current_exe) = std::env::current_exe() {
+      if current_exe.to_str().unwrap_or("").contains(".cargo") {
+        std::process::Command::new("cp")
+          .args([current_exe.to_str().unwrap(), "/usr/local/bin/learnerd"])
+          .output()?;
+        std::process::Command::new("chown")
+          .args(["root:root", "/usr/local/bin/learnerd"])
+          .output()?;
+        std::process::Command::new("chmod").args(["755", "/usr/local/bin/learnerd"]).output()?;
+      }
+    }
+
     fs::write("/etc/systemd/system/learnerd.service", service)?;
+
+    // Reload systemd
+    std::process::Command::new("systemctl").args(["daemon-reload"]).output()?;
+
     Ok(())
   }
 
