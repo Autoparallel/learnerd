@@ -32,7 +32,7 @@ jobs:
         run: taplo fmt --check
 
   per-target:
-    name: ${{ matrix.job }}-${{ matrix.target }}
+    name: ${{ matrix.job }}-${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
