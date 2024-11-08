@@ -229,27 +229,27 @@ User=root
 Group=root
 RuntimeDirectory=learnerd
 RuntimeDirectoryMode=0755
-PIDFile=/run/learnerd/learnerd.pid
+PIDFile=/var/run/learnerd.pid
 WorkingDirectory=/var/lib/learnerd
 ExecStart=/usr/local/bin/learnerd daemon start
 ExecStop=/usr/local/bin/learnerd daemon stop
 Restart=on-failure
 RestartSec=60
 
-# Logging - use our application's log files
+# Logging
 StandardOutput=append:/var/log/learnerd/stdout.log
 StandardError=append:/var/log/learnerd/stderr.log
 
 # Make sure directories exist
 ExecStartPre=/bin/mkdir -p /var/lib/learnerd
 ExecStartPre=/bin/mkdir -p /var/log/learnerd
-ExecStartPre=/bin/mkdir -p /run/learnerd
+ExecStartPre=/bin/mkdir -p /var/run/learnerd
 ExecStartPre=/bin/chown -R root:root /var/lib/learnerd
 ExecStartPre=/bin/chown -R root:root /var/log/learnerd
-ExecStartPre=/bin/chown -R root:root /run/learnerd
+ExecStartPre=/bin/chown -R root:root /var/run/learnerd
 ExecStartPre=/bin/chmod 755 /var/lib/learnerd
 ExecStartPre=/bin/chmod 755 /var/log/learnerd
-ExecStartPre=/bin/chmod 755 /run/learnerd
+ExecStartPre=/bin/chmod 755 /var/run/learnerd
 
 # Security settings
 NoNewPrivileges=yes
@@ -266,10 +266,10 @@ WantedBy=multi-user.target
     // Create required directories
     fs::create_dir_all("/var/lib/learnerd")?;
     fs::create_dir_all("/var/log/learnerd")?;
-    fs::create_dir_all("/run/learnerd")?;
+    fs::create_dir_all("/var/run/learnerd")?;
 
     // Set permissions
-    for dir in ["/var/lib/learnerd", "/var/log/learnerd", "/run/learnerd"] {
+    for dir in ["/var/lib/learnerd", "/var/log/learnerd", "/var/run/learnerd"] {
       std::process::Command::new("chown").args(["-R", "root:root", dir]).output()?;
       std::process::Command::new("chmod").args(["755", dir]).output()?;
     }
