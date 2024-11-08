@@ -12,7 +12,6 @@ use std::{
   path::PathBuf,
 };
 
-use daemonize::Daemonize;
 use nix::{
   sys::signal::{self, Signal},
   unistd::Pid,
@@ -148,37 +147,33 @@ impl Daemon {
     info!("Starting learnerd daemon");
     debug!("Using config: {:?}", self.config);
 
-    let stdout = File::create(self.config.log_dir.join("stdout.log"))?;
-    let stderr = File::create(self.config.log_dir.join("stderr.log"))?;
+    // let stdout = File::create(self.config.log_dir.join("stdout.log"))?;
+    // let stderr = File::create(self.config.log_dir.join("stderr.log"))?;
 
-    // Since we're using systemd, we can run directly without daemonize
-    #[cfg(target_os = "linux")]
-    {
-      info!("Daemon started successfully");
-      self.run()
-    }
+    info!("Daemon started successfully");
+    self.run()
 
-    #[cfg(target_os = "macos")]
-    {
-      let daemonize = Daemonize::new()
-        .pid_file(&self.config.pid_file)
-        .chown_pid_file(true)
-        .working_directory(&self.config.working_dir)
-        .stdout(stdout)
-        .stderr(stderr);
+    // #[cfg(target_os = "macos")]
+    // {
+    //   let daemonize = Daemonize::new()
+    //     .pid_file(&self.config.pid_file)
+    //     .chown_pid_file(true)
+    //     .working_directory(&self.config.working_dir)
+    //     .stdout(stdout)
+    //     .stderr(stderr);
 
-      match daemonize.start() {
-        Ok(_) => {
-          info!("Daemon started successfully");
-          self.run()?;
-          Ok(())
-        },
-        Err(e) => {
-          error!("Failed to start daemon: {}", e);
-          Err(LearnerdErrors::Daemon(e.to_string()))
-        },
-      }
-    }
+    //   match daemonize.start() {
+    //     Ok(_) => {
+    //       info!("Daemon started successfully");
+    //       self.run()?;
+    //       Ok(())
+    //     },
+    //     Err(e) => {
+    //       error!("Failed to start daemon: {}", e);
+    //       Err(LearnerdErrors::Daemon(e.to_string()))
+    //     },
+    //   }
+    // }
   }
 
   /// Stops the daemon process
