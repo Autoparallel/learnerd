@@ -20,6 +20,7 @@ use nix::{
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info};
 use tracing_appender::rolling;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use super::*;
 use crate::errors::LearnerdErrors;
@@ -101,22 +102,48 @@ impl Daemon {
     fs::create_dir_all(&self.config.log_dir)?;
 
     // Configure file logging
+    // let file_appender = rolling::RollingFileAppender::builder()
+    //   .rotation(rolling::Rotation::NEVER) // TODO (autoparallel): This should be rotated, but I
+    // changed this so that the files are named more easily for now.   .filename_prefix("
+    // learnerd")   .filename_suffix("log")
+    //   .build(&self.config.log_dir)?;
+
+    // Configure file logging
     let file_appender = rolling::RollingFileAppender::builder()
-      .rotation(rolling::Rotation::NEVER) // TODO (autoparallel): This should be rotated, but I changed this so that the files are named more easily for now.
+      .rotation(rolling::Rotation::DAILY)
       .filename_prefix("learnerd")
       .filename_suffix("log")
       .build(&self.config.log_dir)?;
 
-    // Initialize daemon logger
-    tracing_subscriber::fmt()
+    // Create a file layer for file logging
+    let file_layer = tracing_subscriber::fmt::layer()
       .with_writer(file_appender)
       .with_ansi(false)
       .with_thread_ids(true)
       .with_target(true)
       .with_file(true)
-      .with_line_number(true)
-      .with_env_filter(EnvFilter::new("debug")) // TODO (autoparallel): Make this configurable?
+      .with_line_number(true);
+
+    // Create a stdout layer for systemd/journal capture
+    let stdout_layer = tracing_subscriber::fmt::layer().with_ansi(false).with_target(true);
+
+    // Initialize both layers
+    tracing_subscriber::registry()
+      .with(file_layer)
+      .with(stdout_layer)
+      .with(EnvFilter::new("debug"))
       .init();
+
+    // // Initialize daemon logger
+    // tracing_subscriber::fmt()
+    //   .with_writer(file_appender)
+    //   .with_ansi(false)
+    //   .with_thread_ids(true)
+    //   .with_target(true)
+    //   .with_file(true)
+    //   .with_line_number(true)
+    //   .with_env_filter(EnvFilter::new("debug")) // TODO (autoparallel): Make this configurable?
+    //   .init();
 
     info!("Starting learnerd daemon");
     debug!("Using config: {:?}", self.config);
@@ -233,8 +260,8 @@ RestartSec=60
 RemainAfterExit=yes
 
 # Logging configuration
-StandardOutput=append:/var/log/learnerd/stdout.log
-StandardError=append:/var/log/learnerd/stderr.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
