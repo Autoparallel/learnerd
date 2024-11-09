@@ -181,7 +181,7 @@ pub enum DaemonCommands {
 /// working_dir: "/Library/Application Support/learnerd"
 /// log_dir: "/Library/Logs/learnerd"
 /// ```
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Daemon {
   /// Path to store the PID file.
   ///
@@ -356,5 +356,35 @@ impl Daemon {
       std::thread::sleep(std::time::Duration::from_secs(5));
       debug!("Daemon heartbeat");
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+
+  use tempfile::tempdir;
+
+  use super::*;
+
+  fn setup_test_daemon() -> (Daemon, tempfile::TempDir) {
+    let test_dir = tempdir().expect("Failed to create temp directory");
+    let daemon = Daemon {
+      pid_file:    test_dir.path().join("test.pid"),
+      working_dir: test_dir.path().join("work"),
+      log_dir:     test_dir.path().join("logs"),
+    };
+    (daemon, test_dir)
+  }
+
+  #[test]
+  fn test_daemon_directory_creation() {
+    let (daemon, _temp) = setup_test_daemon();
+    let daemon_clone = daemon.clone();
+    // Start should create directories
+    let _handle = std::thread::spawn(move || daemon.start());
+    std::thread::sleep(std::time::Duration::from_secs(5));
+
+    assert!(daemon_clone.working_dir.exists(), "Working directory should be created");
+    assert!(daemon_clone.log_dir.exists(), "Log directory should be created");
   }
 }
