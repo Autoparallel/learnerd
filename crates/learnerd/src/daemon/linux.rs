@@ -1,9 +1,42 @@
+//! Linux-specific daemon implementation using systemd.
+//!
+//! Provides functions for installing and managing the daemon as a Linux system service.
+//! Uses systemd for service management and follows FHS conventions for daemon
+//! directory structure.
+//!
+//! # Service Configuration
+//!
+//! The daemon is installed as a systemd service with:
+//! - Network dependency management
+//! - Automatic restart on failure
+//! - Journal integration for logging
+//! - Standard Linux directory paths
+
 use super::*;
 
+/// Default PID file location following FHS conventions
 pub const DEFAULT_PID_FILE: &str = "/var/run/learnerd.pid";
+
+/// Default working directory for daemon operations
 pub const DEFAULT_WORKING_DIR: &str = "/var/lib/learnerd";
+
+/// Default log directory following system log conventions
 pub const DEFAULT_LOG_DIR: &str = "/var/log/learnerd";
 
+/// Installs the daemon as a systemd service.
+///
+/// Creates a service unit file and installs the binary:
+/// - Sets up service dependencies and metadata
+/// - Configures process management and logging
+/// - Installs binary to /usr/local/bin if running from cargo
+/// - Reloads systemd configuration
+///
+/// # Errors
+///
+/// Returns `LearnerdErrors` if:
+/// - Binary installation fails
+/// - Service file creation fails
+/// - Systemd reload fails
 pub fn install_system_daemon(_daemon: &Daemon) -> Result<(), LearnerdErrors> {
   let service = format!(
     r#"[Unit]
@@ -46,10 +79,22 @@ WantedBy=multi-user.target
   Ok(())
 }
 
+/// Removes the daemon service configuration.
+///
+/// # Errors
+///
+/// Returns `LearnerdErrors` if service file removal fails.
 pub fn uninstall_system_daemon() -> Result<(), LearnerdErrors> {
   Ok(fs::remove_file("/etc/systemd/system/learnerd.service")?)
 }
 
+/// Displays post-installation instructions and helpful commands.
+///
+/// Shows:
+/// - Service activation sequence
+/// - Debugging commands
+/// - Log access instructions
+/// - Important systemd paths
 pub fn daemon_install_prompt(daemon: &Daemon) {
   println!("{} Daemon service installed", style(SUCCESS).green());
 

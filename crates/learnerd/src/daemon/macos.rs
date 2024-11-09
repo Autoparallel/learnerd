@@ -1,13 +1,47 @@
+//! macOS-specific daemon implementation using launchd.
+//!
+//! Provides functions for installing and managing the daemon as a macOS system service.
+//! Uses launchd for service management and follows Apple's guidelines for daemon
+//! configuration and directory structure.
+//!
+//! # Service Configuration
+//!
+//! The daemon is installed as a system-level launchd service with:
+//! - Automatic restart on crash
+//! - 60-second throttle between restarts
+//! - Structured logging to system directories
+//! - Standard macOS directory paths
+
 use super::*;
 
+/// Default PID file location following macOS conventions
 pub const DEFAULT_PID_FILE: &str = "/Library/Application Support/learnerd/learnerd.pid";
+
+/// Default working directory for daemon operations
 pub const DEFAULT_WORKING_DIR: &str = "/Library/Application Support/learnerd";
+
+/// Default log directory following macOS system log conventions
 pub const DEFAULT_LOG_DIR: &str = "/Library/Logs/learnerd";
 
-// Constants for service naming
+/// Service identifier for launchd integration
 pub const SERVICE_NAME: &str = "learnerd.daemon";
+
+/// Property list filename for the launchd service definition
 pub const SERVICE_FILE: &str = "learnerd.daemon.plist";
 
+/// Installs the daemon as a launchd service.
+///
+/// Creates a property list file with appropriate configuration for the daemon:
+/// - Service identification and metadata
+/// - Executable path and arguments
+/// - Working directory and log paths
+/// - Restart and crash handling policies
+///
+/// # Errors
+///
+/// Returns `LearnerdErrors` if:
+/// - Cannot determine current executable path
+/// - Fails to write property list file
 pub fn install_system_daemon(daemon: &Daemon) -> Result<(), LearnerdErrors> {
   let plist = format!(
     r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -49,10 +83,22 @@ pub fn install_system_daemon(daemon: &Daemon) -> Result<(), LearnerdErrors> {
   Ok(fs::write(format!("/Library/LaunchDaemons/{}", SERVICE_FILE), plist)?)
 }
 
+/// Removes the daemon service configuration.
+///
+/// # Errors
+///
+/// Returns `LearnerdErrors` if the property list file cannot be removed.
 pub fn uninstall_system_daemon() -> Result<(), LearnerdErrors> {
   Ok(fs::remove_file(format!("/Library/LaunchDaemons/{}", SERVICE_FILE))?)
 }
 
+/// Displays post-installation instructions and helpful commands.
+///
+/// Shows:
+/// - Service activation steps
+/// - Troubleshooting commands
+/// - Service control operations
+/// - Important file paths
 pub fn daemon_install_prompt(daemon: &Daemon) {
   println!("{} Daemon service installed", style(SUCCESS).green());
 

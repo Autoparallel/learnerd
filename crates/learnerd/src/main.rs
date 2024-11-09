@@ -153,6 +153,7 @@ enum Commands {
 
   /// Manage the learnerd daemon
   Daemon {
+    /// The set of commands specifically for managing the [`Daemon`].
     #[command(subcommand)]
     cmd: DaemonCommands,
   },

@@ -57,6 +57,10 @@ fmt:
     cargo fmt --all
     taplo fmt
 
+# Check unused dependencies
+udeps:
+    cargo +nightly udeps --workspace
+
 # Clean build artifacts
 clean:
     cargo clean
