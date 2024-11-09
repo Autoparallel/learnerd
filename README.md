@@ -120,125 +120,53 @@ learnerd clean
 
 ### Daemon Management
 
-The `learnerd` daemon can run in the background to handle tasks like paper monitoring and updates. It can be run directly or installed as a system service.
+`learnerd` can run as a background service for paper monitoring and updates.
 
-#### Basic Usage
-
+#### System Service Installation
+**Linux (`sytemd`):**
 ```bash
-# Start the daemon
-learnerd daemon start
-
-# Check daemon status
-learnerd daemon status
-
-# Stop the daemon
-learnerd daemon stop
-
-# Restart the daemon
-learnerd daemon restart
-```
-
-### System Service Installation
-
-#### Linux (systemd)
-```bash
-# Install the service
+# Install and start
 sudo learnerd daemon install
-
-# Enable and start the service
 sudo systemctl daemon-reload
-sudo systemctl enable learnerd
-sudo systemctl start learnerd
+sudo systemctl enable --now learnerd
 
-# Verify it's running
-sudo systemctl status learnerd
+# Manage
+sudo systemctl status learnerd     # Check status
+sudo journalctl -u learnerd -f     # View logs
+sudo systemctl restart learnerd    # Restart service
 
-# View logs
-sudo journalctl -u learnerd
-
-# Service management
-sudo systemctl stop learnerd     # Stop the service
-sudo systemctl start learnerd    # Start the service
-sudo systemctl restart learnerd  # Restart the service
-
-# Remove the service
-sudo systemctl stop learnerd
+# Remove
+sudo systemctl disable --now learnerd
 sudo learnerd daemon uninstall
-sudo systemctl daemon-reload
 ```
 
-#### macOS (launchd)
+**MacOS (`launchd`):**
 ```bash
-# Install service files
+# Install and start
 sudo learnerd daemon install
-
-# Load and start the service
 sudo launchctl load /Library/LaunchDaemons/learnerd.daemon.plist
 
-# Verify it's running
-sudo launchctl list | grep learnerd
+# Manage
+sudo launchctl list | grep learnerd           # Check status
+tail -f /Library/Logs/learnerd/learnerd.log   # View logs
+sudo launchctl kickstart -k system/learnerd.daemon  # Restart
 
-# Service management
-sudo launchctl bootout system/learnerd.daemon        # Stop
-sudo launchctl bootstrap system /Library/LaunchDaemons/learnerd.daemon.plist  # Start
-sudo launchctl kickstart -k system/learnerd.daemon   # Restart
-
-# Remove the service completely
-sudo pkill learnerd && sudo launchctl bootout system/learnerd.daemon # stop and remove from bootlist
-sudo learnerd daemon uninstall # remove service file all together
+# Remove
+sudo launchctl bootout system/learnerd.daemon
+sudo learnerd daemon uninstall
 ```
 
-Important Notes:
-- The service is not automatically started after installation
-- You must explicitly `load` the service to activate it
-- Once loaded, it will start automatically on system boot
-- If you `bootout` the service, you must `load` again to reactivate it
-- The `kickstart` command only works if the service is currently loaded
+#### Logs
+- Linux: /var/log/learnerd/
+- macOS: /Library/Logs/learnerd/
 
-#### Log Files
+Files: `learnerd.log` (main, rotated daily), `stdout.log`, `stderr.log`
 
-The daemon writes logs to the following locations:
+#### Troubleshooting
 
-- Linux: `/var/log/learnerd/`
-- macOS: `/Library/Logs/learnerd/`
-
-Log files include:
-- `learnerd.log` - Main application log with rotation
-- `stdout.log` - Standard output
-- `stderr.log` - Standard error
-
-View the logs:
-```bash
-# View main log
-tail -f /var/log/learnerd/learnerd.log   # Linux
-tail -f /Library/Logs/learnerd/learnerd.log   # macOS
-
-# View last 100 lines with timestamps
-tail -n 100 /var/log/learnerd/learnerd.log
-```
-
-#### Common Issues
-
-1. **Permission Denied**
-   ```bash
-   # Ensure correct permissions on log directory
-   sudo chown -R root:root /var/log/learnerd   # Linux
-   sudo chown -R root:wheel /Library/Logs/learnerd   # macOS
-   ```
-
-2. **Service Won't Start**
-   ```bash
-   # Check system logs
-   sudo journalctl -u learnerd.service   # Linux
-   sudo log show --predicate 'processImagePath contains "learnerd"'   # macOS
-   ```
-
-3. **PID File Issues**
-   ```bash
-   # If daemon won't start due to stale PID file
-   sudo rm /var/run/learnerd.pid   # Linux
-   sudo rm "/Library/Application Support/learnerd/learnerd.pid"   # macOS
-   ```
+- **Permission Errors:** Check ownership of log directories
+- **Won't Start:** Check system logs and remove stale PID file if present
+- **Installation:** Run commands as root/sudo
 
 ## Project Structure
 
