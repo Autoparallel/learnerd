@@ -54,3 +54,23 @@
 - name: "help wanted 🆘"
   color: "008672"
   description: "Extra attention is needed"
+
+- name: "tech debt 🏗️"
+  color: "ff7619"
+  description: "Technical debt and cleanup tasks"
+
+- name: "ci/cd 🔄"
+  color: "44cc11"
+  description: "Changes to CI/CD pipeline"
+
+- name: "dependencies 📦"
+  color: "cb7eed"
+  description: "Dependency updates and maintenance"
+
+- name: "discussion 💭"
+  color: "5319e7"
+  description: "Needs discussion or decisions"
+
+- name: "security 🔒"
+  color: "d93f0b"
+  description: "Security-related changes or fixes"

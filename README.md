@@ -118,6 +118,56 @@ learnerd -v add 2301.07041
 learnerd clean
 ```
 
+### Daemon Management
+
+`learnerd` can run as a background service for paper monitoring and updates.
+
+#### System Service Installation
+**Linux (`sytemd`):**
+```bash
+# Install and start
+sudo learnerd daemon install
+sudo systemctl daemon-reload
+sudo systemctl enable --now learnerd
+
+# Manage
+sudo systemctl status learnerd     # Check status
+sudo journalctl -u learnerd -f     # View logs
+sudo systemctl restart learnerd    # Restart service
+
+# Remove
+sudo systemctl disable --now learnerd
+sudo learnerd daemon uninstall
+```
+
+**MacOS (`launchd`):**
+```bash
+# Install and start
+sudo learnerd daemon install
+sudo launchctl load /Library/LaunchDaemons/learnerd.daemon.plist
+
+# Manage
+sudo launchctl list | grep learnerd           # Check status
+tail -f /Library/Logs/learnerd/learnerd.log   # View logs
+sudo launchctl kickstart -k system/learnerd.daemon  # Restart
+
+# Remove
+sudo launchctl bootout system/learnerd.daemon
+sudo learnerd daemon uninstall
+```
+
+#### Logs
+- Linux: /var/log/learnerd/
+- macOS: /Library/Logs/learnerd/
+
+Files: `learnerd.log` (main, rotated daily), `stdout.log`, `stderr.log`
+
+#### Troubleshooting
+
+- **Permission Errors:** Check ownership of log directories
+- **Won't Start:** Check system logs and remove stale PID file if present
+- **Installation:** Run commands as root/sudo
+
 ## Project Structure
 
 The project consists of two main components:
@@ -180,17 +230,56 @@ The project maintains code quality through automated CI workflows:
 
 All CI checks must pass before merging pull requests, maintaining consistent quality across contributions.
 
-### Development Setup
+## Development
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   cargo build
-   ```
-3. Run tests:
-   ```bash
-   cargo test --workspace
-   ```
+This project uses [just](https://github.com/casey/just) as a command runner.
+
+```bash
+# First time setup
+cargo install just
+just setup  # installs dependencies, targets, and required tools
+```
+
+### Common Commands
+
+```bash
+just         # show all available commands
+just ci      # run all checks (fmt, lint, test, build)
+just test    # run test suite
+just fmt     # format code
+```
+
+### Platform Builds
+
+```bash
+just build-all        # build all targets
+just build-linux      # linux (x86_64-musl)
+just build-mac        # macOS (arm64)
+```
+
+All commands support standard Cargo flags:
+```bash
+just test -- --release  # run tests in release mode
+just build -- --quiet   # quiet build output
+```
+
+> [!TIP]
+> Running `just ci` locally ensures your code will pass CI checks!
+
+### System Requirements
+
+The setup command will attempt to install required system dependencies, but if you need to install them manually:
+
+#### Linux (Debian/Ubuntu)
+```bash
+sudo apt-get install pkg-config libssl-dev
+```
+
+#### macOS
+```bash
+brew install openssl@3
+export OPENSSL_DIR=$(brew --prefix openssl@3)  # Add to your shell profile
+```
 
 ## License
 

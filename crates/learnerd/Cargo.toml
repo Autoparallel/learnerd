@@ -15,11 +15,13 @@ console.workspace            = true
 dialoguer.workspace          = true
 glob.workspace               = true
 learner.workspace            = true
+nix.workspace                = true
+serde.workspace              = true
 thiserror.workspace          = true
 tokio.workspace              = true
 tracing.workspace            = true
+tracing-appender.workspace   = true
 tracing-subscriber.workspace = true
-
 
 [dev-dependencies]
 anyhow                = { workspace = true }

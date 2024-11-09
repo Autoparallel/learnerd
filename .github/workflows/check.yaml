@@ -1,4 +1,7 @@
 name: check
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -11,7 +14,7 @@ env:
 
 jobs:
   format:
-    name: formatting
+    name: fmt
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -31,61 +34,105 @@ jobs:
       - name: run TOML fmt
         run: taplo fmt --check
 
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
+  per-target:
+    name: ${{ matrix.job }} / ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          # Linux targets
+          - job: build
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - job: lint
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          # macOS targets  
+          - job: build
+            os: macos-latest
+            target: aarch64-apple-darwin
+          - job: lint
+            os: macos-latest
+            target: aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          targets: ${{ matrix.target }}
+          components: ${{ matrix.job == 'lint' && 'clippy' || '' }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          key: check/${{ matrix.job }}/${{ matrix.target }}
 
-      - name: run clippy
-        run: cargo clippy --all-targets --all-features
+      - name: Build
+        if: matrix.job == 'build'
+        run: cargo build --target ${{ matrix.target }} --workspace
+
+      - name: Clippy
+        if: matrix.job == 'lint'
+        run: cargo clippy --target ${{ matrix.target }} --all-targets --all-features -- --deny warnings
 
   test:
-    name: test
-    runs-on: ubuntu-latest
+    name: test / ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build --verbose --workspace
+        with:
+          key: check/test/${{ matrix.target }}
 
       - name: Run tests
-        run: cargo test --verbose --workspace
+        run: cargo test --verbose --target ${{ matrix.target }} --workspace
 
   udeps:
-    name: unused dependencies
-    runs-on: ubuntu-latest
+    name: udeps / ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            target: aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
-
+        with:
+          targets: ${{ matrix.target }}
+      
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-
+        with:
+          key: check/udeps/${{ matrix.target }}
+      
       - name: Install cargo-udeps
         run: cargo install cargo-udeps --locked
-
+      
       - name: Check unused dependencies
-        run: cargo udeps --workspace
+        run: cargo +nightly udeps --target ${{ matrix.target }} --workspace
 
   semver:
     name: semver

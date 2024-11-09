@@ -54,4 +54,12 @@ pub enum LearnerdErrors {
   /// Glob pattern matching errors
   #[error(transparent)]
   Glob(#[from] glob::PatternError),
+
+  /// Tracing appender initialization error.
+  #[error(transparent)]
+  TracingInit(#[from] tracing_appender::rolling::InitError),
+
+  /// Daemon-specific errors
+  #[error("Daemon error: {0}")]
+  Daemon(String),
 }
