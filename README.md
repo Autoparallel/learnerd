@@ -232,46 +232,39 @@ All CI checks must pass before merging pull requests, maintaining consistent qua
 
 ## Development
 
-This project uses [just](https://github.com/casey/just) as a command runner. Install it with:
+This project uses [just](https://github.com/casey/just) as a command runner.
 
 ```bash
+# First time setup
 cargo install just
+just setup  # installs dependencies, targets, and required tools
 ```
 
 ### Common Commands
 
 ```bash
-# Setup development environment (install dependencies and targets)
-just setup
-
-# Build all targets
-just build-all
-
-# Run tests
-just test
-
-# Format code
-just fmt
-
-# Run linter
-just lint
-
-# Run all CI checks locally
-just ci
-
-# Show available commands
-just
+just         # show all available commands
+just ci      # run all checks (fmt, lint, test, build)
+just test    # run test suite
+just fmt     # format code
 ```
 
-### Building for Specific Targets
+### Platform Builds
 
 ```bash
-# Build for x86_64 Linux
-just build-x86-linux
-
-# Build for ARM64 macOS
-just build-arm-mac
+just build-all        # build all targets
+just build-linux      # linux (x86_64-musl)
+just build-mac        # macOS (arm64)
 ```
+
+All commands support standard Cargo flags:
+```bash
+just test -- --release  # run tests in release mode
+just build -- --quiet   # quiet build output
+```
+
+> [!TIP]
+> Running `just ci` locally ensures your code will pass CI checks!
 
 ### System Requirements
 

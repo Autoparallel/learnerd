@@ -38,7 +38,7 @@ pub const DEFAULT_LOG_DIR: &str = "/var/log/learnerd";
 /// - Service file creation fails
 /// - Systemd reload fails
 pub fn install_system_daemon(_daemon: &Daemon) -> Result<(), LearnerdErrors> {
-  let service = format!(
+  let service = String::from(
     r#"[Unit]
 Description=Academic Paper Management Daemon
 After=network.target
@@ -59,7 +59,7 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-"#
+"#,
   );
 
   // Install the binary to /usr/local/bin if it's not there
