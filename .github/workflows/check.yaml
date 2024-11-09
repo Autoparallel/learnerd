@@ -11,7 +11,7 @@ env:
 
 jobs:
   format:
-    name: formatting
+    name: check/fmt
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -32,7 +32,7 @@ jobs:
         run: taplo fmt --check
 
   per-target:
-    name: ${{ matrix.job }}-${{ matrix.target }}
+    name: check/${{ matrix.job }}/${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
@@ -64,7 +64,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.job }}/${{ matrix.target }}
+          key: check/${{ matrix.job }}/${{ matrix.target }}
 
       - name: Build
         if: matrix.job == 'build'
@@ -75,12 +75,11 @@ jobs:
         run: cargo clippy --target ${{ matrix.target }} --all-targets --all-features -- --deny warnings
 
   test:
-    name: test/${{ matrix.os }}
+    name: check/test/${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -97,18 +96,17 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: test-${{ matrix.os }}
+          key: check/test/${{ matrix.target }}
 
       - name: Run tests
-        run: cargo test --verbose --workspace
+        run: cargo test --verbose --target ${{ matrix.target }} --workspace
 
   udeps:
-    name: unused_dependencies/${{ matrix.os }}
+    name: check/udeps/${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -125,16 +123,16 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: udeps-${{ matrix.os }}
+          key: check/udeps/${{ matrix.target }}
       
       - name: Install cargo-udeps
         run: cargo install cargo-udeps --locked
       
       - name: Check unused dependencies
-        run: cargo +nightly udeps --workspace
+        run: cargo +nightly udeps --target ${{ matrix.target }} --workspace
 
   semver:
-    name: semver
+    name: check/semver
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
