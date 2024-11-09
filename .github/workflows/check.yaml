@@ -91,23 +91,24 @@ jobs:
         run: cargo test --verbose --workspace
 
   udeps:
-    name: unused dependencies
+    name: unused dependencies (${{ matrix.target }})
     runs-on: ubuntu-latest
     continue-on-error: true
+    strategy:
+      matrix:
+        target: [learner, learnerd]
     steps:
       - uses: actions/checkout@v4
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
-
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-
+        with:
+          key: udeps-${{ matrix.target }}
       - name: Install cargo-udeps
         run: cargo install cargo-udeps --locked
-
       - name: Check unused dependencies
-        run: cargo udeps --workspace
+        run: cargo +nightly udeps -p ${{ matrix.target }}
 
   semver:
     name: semver
