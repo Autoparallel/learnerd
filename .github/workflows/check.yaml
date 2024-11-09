@@ -64,7 +64,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.job }}-${{ matrix.target }}
+          key: ${{ matrix.job }}/${{ matrix.target }}
 
       - name: Build
         if: matrix.job == 'build'
@@ -75,7 +75,7 @@ jobs:
         run: cargo clippy --target ${{ matrix.target }} --all-targets --all-features -- --deny warnings
 
   test:
-    name: test-${{ matrix.os }}
+    name: test/${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
@@ -103,7 +103,7 @@ jobs:
         run: cargo test --verbose --workspace
 
   udeps:
-    name: unused dependencies (${{ matrix.os }})
+    name: unused_dependencies/${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
