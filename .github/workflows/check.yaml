@@ -32,7 +32,7 @@ jobs:
         run: taplo fmt --check
 
   per-target:
-    name: ${{ matrix.job }}/${{ matrix.target }}
+    name: ${{ matrix.job }} / ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
@@ -75,7 +75,7 @@ jobs:
         run: cargo clippy --target ${{ matrix.target }} --all-targets --all-features -- --deny warnings
 
   test:
-    name: test/${{ matrix.target }}
+    name: test / ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
@@ -102,7 +102,7 @@ jobs:
         run: cargo test --verbose --target ${{ matrix.target }} --workspace
 
   udeps:
-    name: udeps/${{ matrix.target }}
+    name: udeps / ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     continue-on-error: true
     strategy:
