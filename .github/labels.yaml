@@ -66,3 +66,11 @@
 - name: "dependencies 📦"
   color: "cb7eed"
   description: "Dependency updates and maintenance"
+
+- name: "discussion 💭"
+  color: "5319e7"
+  description: "Needs discussion or decisions"
+
+- name: "security 🔒"
+  color: "d93f0b"
+  description: "Security-related changes or fixes"

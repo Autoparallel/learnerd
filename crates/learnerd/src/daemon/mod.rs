@@ -348,8 +348,6 @@ impl Daemon {
   /// Main daemon loop that handles background tasks.
   ///
   /// Currently implements a basic heartbeat for monitoring.
-  /// TODO: Implement actual daemon functionality.
-
   fn run(&self) -> Result<(), LearnerdErrors> {
     info!("Daemon running");
 

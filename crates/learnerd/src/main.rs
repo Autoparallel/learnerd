@@ -251,7 +251,7 @@ async fn main() -> Result<(), LearnerdErrors> {
           false // Default to not proceeding in automated mode
         } else {
           let input = dialoguer::Input::<String>::new()
-            .with_prompt(&format!(
+            .with_prompt(format!(
               "{} Type {} to confirm reinitialization",
               style("⚠️").red(),
               style("INIT").red().bold()
@@ -651,7 +651,7 @@ async fn main() -> Result<(), LearnerdErrors> {
 
           // Require typing DELETE for final confirmation
           let input = dialoguer::Input::<String>::new()
-            .with_prompt(&format!(
+            .with_prompt(format!(
               "{} Type {} to confirm deletion",
               style("⚠️").red(),
               style("DELETE").red().bold()
