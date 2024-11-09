@@ -853,76 +853,7 @@ async fn main() -> Result<(), LearnerdErrors> {
           match daemon.install() {
             Ok(_) => {
               println!("{} Daemon service installed", style(SUCCESS).green());
-
-              #[cfg(target_os = "macos")]
-              {
-                println!("{} Daemon service files installed", style(SUCCESS).green());
-
-                println!("\n{} To activate the service:", style("Next steps").blue());
-                println!(
-                  "   1. Load:     {}",
-                  style(format!("sudo launchctl load /Library/LaunchDaemons/{}", SERVICE_FILE))
-                    .yellow()
-                );
-                println!(
-                  "   2. Verify:   {}",
-                  style("sudo launchctl list | grep learnerd").yellow()
-                );
-
-                println!(
-                  "\n{} Once activated, available commands:",
-                  style("Service management").blue()
-                );
-                println!(
-                  "   Stop:     {}",
-                  style(format!("sudo launchctl bootout system/{}", SERVICE_NAME)).yellow()
-                );
-                println!(
-                  "   Start:    {}",
-                  style(format!(
-                    "sudo launchctl bootstrap system /Library/LaunchDaemons/{}",
-                    SERVICE_FILE
-                  ))
-                  .yellow()
-                );
-                println!(
-                  "   Restart:  {}",
-                  style(format!("sudo launchctl kickstart -k system/{}", SERVICE_NAME)).yellow()
-                );
-              }
-
-              #[cfg(target_os = "linux")]
-              {
-                if cfg!(target_os = "nixos") {
-                  println!("⚠️  On NixOS, please install the service through configuration.nix");
-                  // Maybe provide instructions or a link to documentation
-                  return Ok(());
-                }
-                println!("{} Daemon service installed", style(SUCCESS).green());
-
-                println!("\n{} To activate the service:", style("Next steps").blue());
-                println!("   1. Reload:   {}", style("sudo systemctl daemon-reload").yellow());
-                println!("   2. Enable:   {}", style("sudo systemctl enable learnerd").yellow());
-                println!("   3. Start:    {}", style("sudo systemctl start learnerd").yellow());
-                println!("   4. Verify:   {}", style("sudo systemctl status learnerd").yellow());
-
-                println!("\n{} Troubleshooting commands:", style("Debug").blue());
-                println!("   View logs:     {}", style("sudo journalctl -u learnerd -f").yellow());
-                println!(
-                  "   Check paths:   {}",
-                  style("sudo systemctl show learnerd -p ExecStart,PIDFile,RuntimeDirectory")
-                    .yellow()
-                );
-                println!(
-                  "   Check status:  {}",
-                  style("sudo systemctl status learnerd --no-pager -l").yellow()
-                );
-
-                println!("\n{} Service paths:", style("Configuration").blue());
-                println!("   Working dir: {}", style(daemon.config.working_dir.display()).yellow());
-                println!("   PID file:    {}", style(daemon.config.pid_file.display()).yellow());
-                println!("   Log dir:     {}", style(daemon.config.log_dir.display()).yellow());
-              }
+              daemon_install_prompt(&daemon);
             },
             Err(e) => {
               println!("{} Failed to install daemon: {}", style(WARNING).yellow(), style(&e).red());
@@ -954,7 +885,7 @@ async fn main() -> Result<(), LearnerdErrors> {
           }
         },
         DaemonCommands::Status => {
-          if let Ok(pid) = std::fs::read_to_string(&daemon.config.pid_file) {
+          if let Ok(pid) = std::fs::read_to_string(&daemon.pid_file) {
             let pid = pid.trim();
             println!(
               "{} Daemon is running with PID: {}",
@@ -966,16 +897,10 @@ async fn main() -> Result<(), LearnerdErrors> {
             println!("\n{} Log files:", style("📄").cyan());
             println!(
               "   Main log: {}",
-              style(daemon.config.log_dir.join("learnerd.log").display()).yellow()
+              style(daemon.log_dir.join("learnerd.log").display()).yellow()
             );
-            println!(
-              "   Stdout: {}",
-              style(daemon.config.log_dir.join("stdout.log").display()).yellow()
-            );
-            println!(
-              "   Stderr: {}",
-              style(daemon.config.log_dir.join("stderr.log").display()).yellow()
-            );
+            println!("   Stdout: {}", style(daemon.log_dir.join("stdout.log").display()).yellow());
+            println!("   Stderr: {}", style(daemon.log_dir.join("stderr.log").display()).yellow());
 
             // Show service status if installed
             #[cfg(target_os = "linux")]
